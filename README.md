@@ -2,6 +2,8 @@
 
 inyn-go 是新华三 802.1x 认证协议客户端的开源实现。🐳
 
+通过使用 Golang，得益于强大的生态和现代语言工具链，我们除了能更轻松的实现基本的认证功能，还能够实现更多小功能，并在多种平台上运行。
+
 ## 特点
 
 - 使用 Golang 构建
@@ -33,7 +35,7 @@ service status inyn-go # Init.d
 ## 开发
 
 构建参考：docs/build.md  
-相关协议细节参考：docs/protocal.md  
+相关协议细节参考：docs/protocol.md  
 字典提取参考：docs/dump_dict.md  
 
 ## 致谢
