@@ -1,10 +1,9 @@
 module inyn-go
 
-go 1.22.5
+go 1.23.0
 
-require github.com/google/gopacket v1.1.19
+toolchain go1.23.1
 
-require (
-	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-)
+require github.com/gopacket/gopacket v1.3.0
+
+require golang.org/x/sys v0.24.0 // indirect
