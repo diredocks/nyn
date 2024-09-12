@@ -3,6 +3,7 @@ package inynPackets
 import (
 	//"github.com/google/gopacket"
 	"inyn-go/internal/crypto"
+	"net"
 )
 
 type EAPType uint8
@@ -21,16 +22,16 @@ type ResponseBase struct {
 }
 
 func (r ResponseBase) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
-	res := []byte{0x06, 0x07}                                                // indicate version field start
+	res := []byte{0x06, 0x07}                                                 // indicate version field start
 	res = append(res, inynCrypto.GetBasedEncryptedClientVersion(h3c_info)...) // add the encrypted client version code
-	res = append(res, "  "...)                                               // add two spaces to the slice
-	res = append(res, r.Username...)                                         // add username in the end
+	res = append(res, "  "...)                                                // add two spaces to the slice
+	res = append(res, r.Username...)                                          // add username in the end
 	return res
 }
 
 type ResponseAvailable struct {
 	ResponseBase
-	IP    [4]byte
+	IP    net.IP
 	Proxy byte
 }
 
@@ -45,7 +46,7 @@ func (r ResponseAvailable) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
 type ResponseIdentity struct {
 	ResponseBase
 	Challange [32]byte // Challange Sequence
-	IP        [4]byte
+	IP        net.IP
 }
 
 func (r ResponseIdentity) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
@@ -62,13 +63,13 @@ type ResponseFirstIdentity struct {
 }
 
 type ResponseMD5 struct {
-	EapId      byte
+	EapId      uint8
 	Username   []byte
-	RequestMD5 [16]byte
+	RequestMD5 []byte
 }
 
 func (r ResponseMD5) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
-	size := []byte{16}     // the buff size should be 16
+	size := []byte{16}     // md5 sig length is 16
 	buf := []byte{r.EapId} // EapId + Username + MD5 generated from Server(ResponseMD5)
 	buf = append(buf, r.Username...)
 	buf = append(buf, r.RequestMD5[:]...)

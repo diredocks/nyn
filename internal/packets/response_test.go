@@ -19,7 +19,7 @@ func TestMarshalToBytes(t *testing.T) {
 	res_md5 := ResponseMD5{
 		EapId:      1,
 		Username:   []byte("helloworld"),
-		RequestMD5: [16]byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+		RequestMD5: []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 	}
 	res = res_md5.MarshalToBytes(inynCrypto.H3C_INFO)
 	fmt.Println(res, len(res))

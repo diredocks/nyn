@@ -2,20 +2,20 @@ package main
 
 import (
 	"fmt"
+	"inyn-go/internal/device"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-  "inyn-go/internal/device"
 )
 
 func main() {
 	// Create a new capture instance with mac filled in
 	device, err := inynDevice.NewDevice("enp1s0")
-  if err != nil {
-	  log.Fatal("Could not get MAC address: ", err)
-  }
+	if err != nil {
+		log.Fatal("Could not get MAC address: ", err)
+	}
 	log.Println("MAC Address: ", device.LocalMAC)
 
 	// Start capturing packets
