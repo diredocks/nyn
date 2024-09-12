@@ -1,4 +1,4 @@
 go.sum
 .vscode
 .envrc
-./cmd/inyn/inyn
+./cmd/inyn-go/inyn-go
