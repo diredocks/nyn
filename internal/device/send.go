@@ -35,17 +35,26 @@ func (d *Device) sendStartPacket() ([]byte, error) {
 		Version: 0x01,
 		Type:    layers.EAPOLTypeStart,
 	}
-	if dataSent, err := d.sendPacket(ethLayer, eapolLayer); err != nil {
-		return nil, err
-	} else {
-		return dataSent, nil
+	return d.sendPacket(ethLayer, eapolLayer)
+}
+
+func (d *Device) sendLogOffPacket() ([]byte, error) {
+	ethLayer := &layers.Ethernet{
+		SrcMAC:       d.LocalMAC,
+		DstMAC:       MultcastAddr,
+		EthernetType: layers.EthernetTypeEAPOL,
 	}
+	eapolLayer := &layers.EAPOL{
+		Version: 0x01,
+		Type:    layers.EAPOLTypeLogOff,
+	}
+	return d.sendPacket(ethLayer, eapolLayer)
 }
 
 func (d *Device) sendFirstIdentityPacket(eapId uint8) ([]byte, error) {
 	response := inynPackets.ResponseFirstIdentity{
 		ResponseBase: inynPackets.ResponseBase{
-			Username: []byte(""),
+			Username: []byte(""), // fill in Username
 		},
 	}
 	responseData := response.MarshalToBytes(inynCrypto.H3C_INFO)
@@ -71,13 +80,46 @@ func (d *Device) sendFirstIdentityPacket(eapId uint8) ([]byte, error) {
 	return d.sendPacket(ethLayer, eapolLayer, eapLayer)
 }
 
-func (d *Device) sendResponseMD5(eapId uint8, requestPacket []byte) ([]byte, error) {
+func (d *Device) sendResponseMD5(eapId uint8, md5Challenge []byte) ([]byte, error) {
 	response := inynPackets.ResponseMD5{
-		EapId:      eapId,
-		Username:   []byte(""),
-		RequestMD5: requestPacket[len(requestPacket)-16:],
-		// extract md5 sig from request
-		// which is the last 16 bits in request
+		ResponseBase: inynPackets.ResponseBase{
+			Username: []byte(""), // fill in Username
+			Password: []byte(""), // fill in Password
+		},
+		EapId:        eapId,
+		MD5Challenge: md5Challenge,
+	}
+	responseData := response.MarshalToBytes(inynCrypto.H3C_INFO)
+	ethLayer := &layers.Ethernet{
+		SrcMAC:       d.LocalMAC,
+		DstMAC:       d.TargetMAC,
+		EthernetType: layers.EthernetTypeEAPOL,
+	}
+	eapolLayer := &layers.EAPOL{
+		Version: 0x01,
+		Type:    layers.EAPOLTypeEAP,
+		Length:  uint16(len(responseData) + 5),
+		// 5 represent the size of EAP header
+		// Code(1)+Id(1)+Length(2)+Type(1)
+	}
+	eapLayer := &layers.EAP{
+		Code:     layers.EAPCodeResponse,
+		Id:       eapId,
+		Type:     layers.EAPTypeOTP,
+		TypeData: responseData,
+		Length:   eapolLayer.Length,
+	}
+	return d.sendPacket(ethLayer, eapolLayer, eapLayer)
+}
+
+func (d *Device) sendIdentityPacket(eapId uint8, md5Challenge []byte) ([]byte, error) {
+	response := inynPackets.ResponseMD5{
+		ResponseBase: inynPackets.ResponseBase{
+			Username: []byte(""), // fill in Username
+			Password: []byte(""), // fill in Password
+		},
+		EapId:        eapId,
+		MD5Challenge: md5Challenge,
 	}
 	responseData := response.MarshalToBytes(inynCrypto.H3C_INFO)
 	ethLayer := &layers.Ethernet{

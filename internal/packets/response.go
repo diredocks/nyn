@@ -6,19 +6,14 @@ import (
 	"net"
 )
 
-type EAPType uint8
-type EAPCode uint8
-
-const (
-	EAPCodeH3CData EAPCode = 10
-
-	EAPTypeMD5       EAPType = 4
-	EAPTypeAllocated EAPType = 7
-	EAPTypeAvaliable EAPType = 20
-)
-
 type ResponseBase struct {
 	Username []byte
+	Password []byte
+	IP       net.IP
+}
+
+type ResponseFirstIdentity struct {
+	ResponseBase
 }
 
 func (r ResponseBase) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
@@ -31,7 +26,6 @@ func (r ResponseBase) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
 
 type ResponseAvailable struct {
 	ResponseBase
-	IP    net.IP
 	Proxy byte
 }
 
@@ -46,7 +40,6 @@ func (r ResponseAvailable) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
 type ResponseIdentity struct {
 	ResponseBase
 	Challange [32]byte // Challange Sequence
-	IP        net.IP
 }
 
 func (r ResponseIdentity) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
@@ -58,21 +51,19 @@ func (r ResponseIdentity) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
 	return res
 }
 
-type ResponseFirstIdentity struct {
-	ResponseBase
-}
-
 type ResponseMD5 struct {
-	EapId      uint8
-	Username   []byte
-	RequestMD5 []byte
+	ResponseBase
+	EapId        uint8
+	MD5Challenge []byte
 }
 
 func (r ResponseMD5) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
 	size := []byte{16}     // md5 sig length is 16
 	buf := []byte{r.EapId} // EapId + Username + MD5 generated from Server(ResponseMD5)
-	buf = append(buf, r.Username...)
-	buf = append(buf, r.RequestMD5[:]...)
+	buf = append(buf, r.Password...)
+	buf = append(buf, r.MD5Challenge...)
+	// extract md5 sig from request
+	// which is the last 16 bits in request
 	buf = inynCrypto.ComputeMD5Hash(buf)
 	res := append(size, buf...)
 	res = append(res, r.Username...)
@@ -80,8 +71,7 @@ func (r ResponseMD5) MarshalToBytes(h3c_info inynCrypto.H3CInfo) []byte {
 }
 
 type ResponsePassword struct {
-	Password []byte
-	Username []byte
+	ResponseBase
 }
 
 type ResponseNotification struct {

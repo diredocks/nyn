@@ -20,12 +20,12 @@ type H3CInfo struct {
 
 func GetEncryptedClientVersion(h3c_info H3CInfo) []byte {
 	encryptedClientVersion := make([]byte, 20)
-	//random := uint32(time.Now().Unix()) // Can be any 32-bit integer
+	//random := uint32(time.Now().Unix()) + 2 // Can be any 32-bit integer
 	random := rand.Uint32()
 	randomKey := fmt.Sprintf("%08x", random) // Generate RandomKey as a string
 	// First round of XOR using RandomKey as the key to encrypt the first 16 bytes
-	copy(encryptedClientVersion[:16], h3c_info.Version)
-	xor(encryptedClientVersion, []byte(randomKey))
+	copy(encryptedClientVersion, h3c_info.Version)
+	xor(encryptedClientVersion[:16], []byte(randomKey))
 	// Append the 4-byte random value in network byte order to make 20 bytes total
 	binary.BigEndian.PutUint32(encryptedClientVersion[16:], random)
 	// Second round of XOR using H3C_KEY as the key to encrypt the first 20 bytes

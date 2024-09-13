@@ -24,11 +24,6 @@ type Device struct {
 	done          chan int
 }
 
-type User struct {
-	Username []byte
-	Password []byte
-}
-
 func getAddress(ifaceName string) (net.HardwareAddr, net.IP, error) {
 	iface, err := net.InterfaceByName(ifaceName)
 	if err != nil {
@@ -39,7 +34,7 @@ func getAddress(ifaceName string) (net.HardwareAddr, net.IP, error) {
 }
 
 // New creates a new Capture instance
-func NewDevice(ifaceName string) (*Device, error) {
+func New(ifaceName string) (*Device, error) {
 	// Get the MAC address of the interface
 	mac, ip, err := getAddress(ifaceName)
 	if err != nil {
@@ -79,25 +74,28 @@ func (d *Device) Start() {
 	d.packetSource = gopacket.NewPacketSource(d.handle, d.handle.LinkType())
 
 	// We are ready to take off lol
-	if _, err := d.sendStartPacket(); err != nil {
+	if sent, err := d.sendStartPacket(); err != nil {
 		log.Fatal("Failed to send StartPacket: ", err)
+	} else {
+		log.Println("StartPacket sent!", sent)
 	}
-	log.Println("StartPacket sent!")
 
 	// NOTE: This Goroutine loops receiving packets and handles exit signal
-	for {
-		select {
-		case <-d.done:
-			return
-		case packet := <-d.packetSource.Packets():
-			// Handle packet processing
-			log.Println("Captured packet:")
-			log.Printf("Packet Length: %d bytes\n", len(packet.Data()))
-			log.Println("Packet Data: ", packet.Data())
-			// Further packet processing can be done here
-			d.handlePacket(packet)
+	go func() {
+		for {
+			select {
+			case <-d.done:
+				return
+			case packet := <-d.packetSource.Packets():
+				// Handle packet processing
+				//log.Println("Captured packet:")
+				//log.Printf("Packet Length: %d bytes\n", len(packet.Data()))
+				//log.Println("Packet Data: ", packet.Data())
+				// Further packet processing can be done here
+				d.handlePacket(packet)
+			}
 		}
-	}
+	}()
 }
 
 // handleSendPacket processes the received packet and sends a response if needed
@@ -107,10 +105,11 @@ func (d *Device) handlePacket(packet gopacket.Packet) {
 	ethPacket, _ := ethLayer.(*layers.Ethernet)
 
 	// Check if it contains an EAPOL (EAP over LAN) layer
-	if eapolLayer := packet.Layer(layers.LayerTypeEAPOL); eapolLayer != nil {
-		eapolPacket, _ := eapolLayer.(*layers.EAPOL)
-		log.Println("EAPOL Packet captured! Type: ", eapolPacket.Type)
-	}
+	/*
+		if eapolLayer := packet.Layer(layers.LayerTypeEAPOL); eapolLayer != nil {
+			eapolPacket, _ := eapolLayer.(*layers.EAPOL)
+			log.Println("EAPOL Packet captured! Type: ", eapolPacket.Type)
+		}*/
 
 	if eapLayer := packet.Layer(layers.LayerTypeEAP); eapLayer != nil {
 		eapPacket, _ := eapLayer.(*layers.EAP)
@@ -122,23 +121,43 @@ func (d *Device) handlePacket(packet gopacket.Packet) {
 			log.Printf("First packet received. TargetMAC set to: %s\n", d.TargetMAC)
 			d.setBPFFilter("ether src %s and ether proto 0x888E", d.TargetMAC)
 			// Response to FirstIdentity
-			if _, err := d.sendFirstIdentityPacket(eapPacket.Id); err != nil {
+			if sent, err := d.sendFirstIdentityPacket(eapPacket.Id); err != nil {
 				log.Fatal("Failed to send StartPacket: ", err)
+			} else {
+				log.Println("FirstIdentity sent!", sent)
 			}
-			log.Println("FirstIdentity sent!")
+			return // return func to avoid proceed to following logic
 		}
 
-		if eapPacket.Type == layers.EAPTypeOTP {
-			if _, err := d.sendResponseMD5(eapPacket.Id, packet.Data()); err != nil {
+		switch eapPacket.Code {
+		case layers.EAPCodeSuccess:
+			log.Println("Successfully Signed in!")
+		case layers.EAPCodeFailure:
+			log.Fatal("Failed to auth!")
+		}
+
+		switch eapPacket.Type {
+		case layers.EAPTypeOTP:
+			if sent, err := d.sendResponseMD5(eapPacket.Id, eapPacket.Contents[6:]); err != nil {
 				log.Fatal("Failed to send ResponseMD5: ", err)
+			} else {
+				log.Println("ResponseMD5 sent!", sent)
 			}
-			log.Println("ResponseMD5 sent!")
+		case layers.EAPTypeIdentity:
+			/*
+				      if sent, err := d.sendResponseIdentity(eapPacket.Id, packet.Data()); err != nil {
+								log.Fatal("Failed to send ResponseMD5: ", err)
+							} else {
+							  log.Println("ResponseMD5 sent!", sent)
+				      }*/
+			log.Println("wow!")
 		}
 	}
 }
 
 // Stop stops the packet capturing process
 func (d *Device) Stop() {
+	d.sendLogOffPacket()
 	close(d.done)
 	if d.handle != nil {
 		d.handle.Close()

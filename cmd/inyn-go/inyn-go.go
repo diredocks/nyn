@@ -12,14 +12,14 @@ import (
 
 func main() {
 	// Create a new capture instance with mac filled in
-	device, err := inynDevice.NewDevice("enp1s0")
+	device, err := inynDevice.New("enp1s0")
 	if err != nil {
 		log.Fatal("Could not get MAC address: ", err)
 	}
 	log.Println("MAC Address: ", device.LocalMAC)
 
 	// Start capturing packets
-	go device.Start()
+	device.Start()
 
 	// Set up a channel to receive OS signals
 	sigs := make(chan os.Signal, 1)
