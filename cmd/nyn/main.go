@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-  log.Println("nyn - how's it doing? :D")
+	log.Println("nyn - how's it doing? :D")
 
 	device, err := nynDevice.New("enp1s0")
 	authService := nynAuth.New(device, nynCrypto.H3CInfoDefault, "", "")
@@ -32,7 +32,7 @@ func main() {
 		case sig := <-sigs:
 			fmt.Printf("\r")
 			log.Printf("nyn - signal: %s. bye!", sig)
-      authService.SendSignOffPacket() // same as above
+			authService.SendSignOffPacket() // same as above
 			device.Stop()
 			return
 		}

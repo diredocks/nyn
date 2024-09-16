@@ -59,22 +59,22 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		case layers.EAPCodeFailure:
 			log.Fatal("nyn - client = fal (o.0)")
 		case layers.EAPCodeRequest:
-      log.Println("h3c - server - asking...")
-    default:
-      log.Println("nyn - client - unknow eap code ^ ")
+			log.Println("h3c - server - asking...")
+		default:
+			log.Println("nyn - client - unknow eap code ^ ")
 		}
 
 		switch eapPacket.Type {
 		case layers.EAPTypeNone:
-      log.Println("h3c - server - suc or fal")
+			log.Println("h3c - server - suc or fal")
 		case layers.EAPTypeOTP:
 			log.Println("h3c - server - asked md5otp")
 			as.SendResponseMD5(eapPacket.Id, eapPacket.Contents)
 			log.Println("nyn - client - answered md5otp")
 		case layers.EAPTypeIdentity:
 			log.Println("h3c - server - asked identity")
-    default:
-      log.Println("nyn - client - unknow eap type ^ ")
+		default:
+			log.Println("nyn - client - unknow eap type ^ ")
 		}
 	}
 
