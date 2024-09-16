@@ -10,3 +10,5 @@ Well, [nyn](https://github.com/diredocks/nyn) is designed just for you! (*≧ω�
 Huge respect to all the heroes researching protocols and implementations! (￣^￣)ゞ
 
 - [bitdust/njit8021xclient](https://github.com/bitdust/njit8021xclient)
+
+> Made with love and a bit of Golang magic. ✨
