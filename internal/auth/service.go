@@ -21,6 +21,7 @@ type DeviceInterface interface {
 type AuthService struct {
 	device   DeviceInterface
 	h3cInfo  nynCrypto.H3CInfo
+  h3cBuffer []byte
 	username string
 	password string
 }
@@ -60,6 +61,17 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 			log.Fatal("nyn - client = fal (o.0)")
 		case layers.EAPCodeRequest:
 			log.Println("h3c - server - asking...")
+    case EAPCodeH3CData:
+      if(eapPacket.Contents[EAPRequestHeadernoCodeLength+H3CIntegrityChanllengeHeader-1] == 0x35){
+        log.Println("h3c - server - integrity challange")
+        var err error
+        as.h3cBuffer, err = as.h3cInfo.ChallangeResponse(
+          eapPacket.Contents[EAPRequestHeadernoCodeLength+H3CIntegrityChanllengeHeader:][:32])
+        if err != nil {
+          log.Fatal("nyn - client - ", err)
+        }
+        log.Println("nyn - client - integrity set")
+      }
 		default:
 			log.Println("nyn - client - unknow eap code ^ ")
 		}

@@ -2,17 +2,18 @@ package nynAuth
 
 import (
 	"net"
+  "github.com/gopacket/gopacket/layers"
 )
 
-type EAPType uint8
-type EAPCode uint8
+//type EAPType uint8
+//type EAPCode uint8
 
 var (
-	EAPCodeH3CData EAPCode = 10
+	EAPCodeH3CData layers.EAPCode = 10
 
-	EAPTypeMD5       EAPType = 4
-	EAPTypeAllocated EAPType = 7
-	EAPTypeAvaliable EAPType = 20
+	EAPTypeMD5       layers.EAPType = 4
+	EAPTypeAllocated layers.EAPType = 7
+	EAPTypeAvaliable layers.EAPType = 20
 
 	ResponseVersionHeader      = []byte{0x06, 0x07}
 	ResponseMD5SignatureHeader = []byte{byte(MD5SignatureLength)}
@@ -21,8 +22,11 @@ var (
 const (
 	EAPResponseHeaderLength  int = 5
 	EAPRequestHeaderLength   int = 5
+	EAPRequestHeadernoCodeLength   int = 4
 	MD5SignatureHeaderLength int = 1
 	MD5SignatureLength       int = 16
+  H3CIntegrityChanllengeHeader int = 5
+  H3CIntegrityChanllengeLength int = 32
 )
 
 var (

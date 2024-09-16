@@ -23,7 +23,10 @@ func (i *H3CInfo) ChallangeResponse(challenge []byte) ([]byte, error) {
 		Offset: decryptedChallenge[4],
 		Length: decryptedChallenge[5],
 	}
-	dictExtraction := extractFromDict(info, i.Dict)
+	dictExtraction, err := extractFromDict(info, i.Dict)
+  if err != nil {
+    return nil, err
+  }
 	dictExtractionMD5 := ComputeMD5Hash(dictExtraction)
 
 	var deDecryptedChallenge []byte
@@ -39,7 +42,10 @@ func (i *H3CInfo) ChallangeResponse(challenge []byte) ([]byte, error) {
 		Offset: deDecryptedChallenge[14],
 		Length: deDecryptedChallenge[15],
 	}
-	dictExtraction2 := extractFromDict(info, i.Dict)
+	dictExtraction2, err := extractFromDict(info, i.Dict)
+  if err != nil {
+    return nil, err
+  }
 	responseMask := append(dictExtraction, dictExtraction2...)
 
 	for i, _ := range responseChallenge {
@@ -54,12 +60,12 @@ func (i *H3CInfo) ChallangeResponse(challenge []byte) ([]byte, error) {
 	return responseChallenge, nil
 }
 
-func extractFromDict(info DictInfo, h3c_dict map[[4]byte][]byte) []byte {
+func extractFromDict(info DictInfo, h3c_dict map[[4]byte][]byte) ([]byte, error) {
 	key := [4]byte(info.Index)
 	value, exists := h3c_dict[key]
 	if !exists {
-		panic(fmt.Sprintf("The key: %x doesn't exists in the key-map(h3c_dict)", key))
+		return nil, fmt.Errorf("The key: %x doesn't exists in the key-map(h3c_dict)", key)
 	}
 	extraction := value[info.Offset : info.Offset+info.Length]
-	return extraction
+	return extraction, nil
 }
