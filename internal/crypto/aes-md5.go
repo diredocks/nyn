@@ -24,9 +24,9 @@ func (i *H3CInfo) ChallangeResponse(challenge []byte) ([]byte, error) {
 		Length: decryptedChallenge[5],
 	}
 	dictExtraction, err := extractFromDict(info, i.Dict)
-  if err != nil {
-    return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 	dictExtractionMD5 := ComputeMD5Hash(dictExtraction)
 
 	var deDecryptedChallenge []byte
@@ -43,9 +43,9 @@ func (i *H3CInfo) ChallangeResponse(challenge []byte) ([]byte, error) {
 		Length: deDecryptedChallenge[15],
 	}
 	dictExtraction2, err := extractFromDict(info, i.Dict)
-  if err != nil {
-    return nil, err
-  }
+	if err != nil {
+		return nil, err
+	}
 	responseMask := append(dictExtraction, dictExtraction2...)
 
 	for i, _ := range responseChallenge {
