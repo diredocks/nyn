@@ -14,6 +14,7 @@ var (
 	EAPTypeMD5       layers.EAPType = 4
 	EAPTypeAllocated layers.EAPType = 7
 	EAPTypeAvaliable layers.EAPType = 20
+	EAPTypeMD5Failed layers.EAPType = 9
 
 	ResponseVersionHeader      = []byte{0x06, 0x07}
 	ResponseMD5SignatureHeader = []byte{byte(MD5SignatureLength)}
@@ -25,7 +26,7 @@ const (
 	EAPRequestHeadernoCodeLength int = 4
 	MD5SignatureHeaderLength     int = 1
 	MD5SignatureLength           int = 16
-	H3CIntegrityChanllengeHeader int = 5
+	H3CIntegrityChanllengeHeader int = 4
 	H3CIntegrityChanllengeLength int = 32
 )
 

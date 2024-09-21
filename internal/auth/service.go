@@ -3,6 +3,7 @@ package nynAuth
 import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
+	"golang.org/x/text/encoding/simplifiedchinese"
 	"log"
 	"net"
 	"nyn/internal/crypto"
@@ -58,15 +59,22 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		case layers.EAPCodeSuccess:
 			log.Println("nyn - client - suc (^_^)")
 		case layers.EAPCodeFailure:
-			log.Fatal("nyn - client = fal (o.0)")
+			if eapPacket.Type == EAPTypeMD5Failed {
+				failMsgSize := eapPacket.TypeData[0]
+				failMsg, _ := simplifiedchinese.GBK.NewDecoder().Bytes(eapPacket.TypeData[1 : failMsgSize-1])
+				log.Printf("nyn - server - %s\n", failMsg)
+				log.Fatal("nyn - client = fal (o.0)")
+			} else {
+				log.Fatal("nyn - client = maybe we should re-auth?")
+			}
 		case layers.EAPCodeRequest:
 			log.Println("h3c - server - asking...")
 		case EAPCodeH3CData:
-			if eapPacket.Contents[EAPRequestHeadernoCodeLength+H3CIntegrityChanllengeHeader-1] == 0x35 {
+			if eapPacket.TypeData[H3CIntegrityChanllengeHeader-1] == 0x35 {
 				log.Println("h3c - server - integrity challange")
 				var err error
 				as.h3cBuffer, err = as.h3cInfo.ChallangeResponse(
-					eapPacket.Contents[EAPRequestHeadernoCodeLength+H3CIntegrityChanllengeHeader:][:32])
+					eapPacket.TypeData[H3CIntegrityChanllengeHeader:][:H3CIntegrityChanllengeLength])
 				if err != nil {
 					log.Fatal("nyn - client - ", err)
 				}
