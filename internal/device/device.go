@@ -36,7 +36,7 @@ func (d *Device) SetBPFFilter(f string, a ...any) (string, error) {
 func New(ifaceName string) (*Device, error) {
 	mac, _, err := getAddr(ifaceName)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%v: %s", err, ifaceName)
 	}
 
 	return &Device{
