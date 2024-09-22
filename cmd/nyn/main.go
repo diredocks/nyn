@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 
-	"io/ioutil"
 	"os"
 	"os/signal"
+	"io/ioutil"
 	"syscall"
+  "reflect"
+  "strings"
 
 	"github.com/BurntSushi/toml"
 
@@ -21,6 +23,17 @@ type Config struct {
 	Username string
 	Password string
 	Device   string
+}
+
+func getFieldNames(s interface{}) []string {
+    val := reflect.ValueOf(s)
+    typ := val.Type()
+
+    var fieldNames []string
+    for i := 0; i < val.NumField(); i++ {
+        fieldNames = append(fieldNames, strings.ToLower(typ.Field(i).Name))
+    }
+    return fieldNames
 }
 
 func main() {
@@ -37,7 +50,14 @@ func main() {
 	}
 
 	var conf Config
-	_, err = toml.Decode(string(tomlData), &conf)
+  var meta toml.MetaData
+  meta, err = toml.Decode(string(tomlData), &conf)
+
+  for _, filedName := range getFieldNames(conf) {
+    if !meta.IsDefined(filedName){
+      log.Fatalf("Config field \"%s\" undefined", filedName)
+    }
+  }
 
 	var device *nynDevice.Device
 	device, err = nynDevice.New(conf.Device)
