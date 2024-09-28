@@ -1,3 +1,4 @@
 .vscode
 cmd/nyn/nyn
 cmd/nyn/config.toml
+cmd/nyn/holidays.json
