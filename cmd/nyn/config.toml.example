@@ -1,3 +1,15 @@
-username = ""
-password = ""
-device = ""
+[general]
+schedule_callback = true
+
+[encryption]
+decrypt_id = "12"
+
+[[auth]]
+user = "leo"
+password = "111"
+device = "enp1s0"
+
+[[auth]]
+user = "leo"
+password = "111"
+device = "wlp2s0"

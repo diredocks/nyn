@@ -4,74 +4,85 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	/*
+	  "time"
 
-	"os"
-	"os/signal"
-	"io/ioutil"
-	"syscall"
-  "reflect"
-  "strings"
-
+	*/
 	"github.com/BurntSushi/toml"
-
 	"nyn/internal/auth"
 	"nyn/internal/crypto"
 	"nyn/internal/device"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
+// Config represents the structure of your TOML file.
 type Config struct {
-	Username string
-	Password string
-	Device   string
+	General struct {
+		ScheduleCallback bool `toml:"schedule_callback"`
+	} `toml:"general"`
+	Encryption struct {
+		DecryptID string `toml:"decrypt_id"`
+	} `toml:"encryption"`
+	Auth []struct {
+		User     string `toml:"user"`
+		Password string `toml:"password"`
+		Device   string `toml:"device"`
+	} `toml:"auth"`
 }
 
-func getFieldNames(s interface{}) []string {
-    val := reflect.ValueOf(s)
-    typ := val.Type()
-
-    var fieldNames []string
-    for i := 0; i < val.NumField(); i++ {
-        fieldNames = append(fieldNames, strings.ToLower(typ.Field(i).Name))
-    }
-    return fieldNames
+type authInterface struct {
+	Auth   *nynAuth.AuthService
+	Device *nynDevice.Device
 }
 
 func main() {
-
+	// load and parse config.toml
 	filePath := flag.String("config", "config.toml", "Path to the config")
 	flag.Parse()
 	if *filePath == "" {
 		log.Fatal("Please provide a config path using the -config flag")
 	}
 
-	tomlData, err := ioutil.ReadFile(*filePath)
-	if err != nil {
-		log.Fatalf("Failed to read the file: %v", err)
+	var config Config
+	// Decode the TOML file into the config struct
+	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
+		log.Fatalf("Error decoding TOML file: %v", err)
 	}
 
-	var conf Config
-  var meta toml.MetaData
-  meta, err = toml.Decode(string(tomlData), &conf)
+	// check weekend holiday etc...
+	/*
+	  today := time.Now()
+	  tomorrow := today.AddDate(0, 0, 1)
+	  // should be some error handling here
+	  _, isTodayHoliday, _ := isHoliday(today, conf.HolidayJson)
+	  _, isTomorrowHoliday, _ := isHoliday(tomorrow, conf.HolidayJson)
+	  if !isTomorrowHoliday && !isWeekend(tomorrow) {
+	    log.Println("Schedule close at 12 PM")
+	  } // what if weekend is work day? maybe network stays? never mind
+	  if !isWeekend(today) && !isTodayHoliday {
+	    log.Println("Schedule start at 08 AM")
+	  }*/
 
-  for _, filedName := range getFieldNames(conf) {
-    if !meta.IsDefined(filedName){
-      log.Fatalf("Config field \"%s\" undefined", filedName)
-    }
-  }
+	var interfaces []authInterface
+	for _, each := range config.Auth {
+		var device *nynDevice.Device
+		device, err := nynDevice.New(each.Device)
+		if err != nil {
+			log.Fatal("Failed to intialize device: ", err)
+		}
 
-	var device *nynDevice.Device
-	device, err = nynDevice.New(conf.Device)
-	if err != nil {
-		log.Fatal("Failed to intialize device: ", err)
+		authService := nynAuth.New(device, nynCrypto.H3CInfoDefault, each.User, each.Password)
+		if err = device.Start(authService); err != nil {
+			log.Fatal("Failed to intialize device: ", err)
+		}
+    authService.SendStartPacket()
+
+		interfaces = append(interfaces, authInterface{
+			Auth:   authService,
+			Device: device})
 	}
-	authService := nynAuth.New(device, nynCrypto.H3CInfoDefault, conf.Username, conf.Password)
-
-	if err = device.Start(authService); err != nil {
-		log.Fatal("Failed to intialize device: ", err)
-	}
-
-	log.Println("nyn - how's it doing? :D")
-	authService.SendStartPacket() // not that elegent, but works
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -80,8 +91,10 @@ func main() {
 		case sig := <-sigs:
 			fmt.Printf("\r")
 			log.Printf("nyn - signal: %s. bye!", sig)
-			authService.SendSignOffPacket() // same as above
-			device.Stop()
+      for _, interfaced := range interfaces {
+        interfaced.Auth.SendSignOffPacket()
+        interfaced.Device.Stop()
+      }
 			return
 		}
 	}
