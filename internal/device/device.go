@@ -2,11 +2,12 @@ package nynDevice
 
 import (
 	"fmt"
+	"net"
+	nynAuth "nyn/internal/auth"
+	"time"
+
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/pcap"
-	"net"
-	"nyn/internal/auth"
-	"time"
 )
 
 type Device struct {

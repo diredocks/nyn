@@ -3,8 +3,9 @@ package nynAuth
 import (
 	"fmt"
 	"net"
-	nynCrypto "nyn/internal/crypto"
 	"os"
+
+	nynCrypto "nyn/internal/crypto"
 
 	"github.com/charmbracelet/log"
 	"github.com/gopacket/gopacket"
@@ -94,7 +95,7 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 				l.client.Fatal("maybe we should re-auth?")
 			}
 		case layers.EAPCodeRequest:
-			l.server.Info("asking...")
+			l.server.Info("asking for something...")
 		case EAPCodeH3CData:
 			if eapPacket.TypeData[H3CIntegrityChanllengeHeader-1] == 0x35 {
 				// Generate ChallangeResponse
@@ -107,7 +108,7 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 				l.client.Info("integrity set")
 			}
 		default:
-			l.client.Warn("unknow eap code")
+			l.client.Warn("unknow eap", "Code", eapPacket.Code)
 		}
 
 		switch eapPacket.Type {
@@ -119,7 +120,7 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		case layers.EAPTypeIdentity:
 			l.server.Info("asked identity")
 		default:
-			l.client.Warn("unknow eap type")
+			l.client.Warn("unknow eap", "Type", eapPacket.Type)
 		}
 	}
 

@@ -3,10 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-
-	//"log"
-
-	//"time"
 	nynAuth "nyn/internal/auth"
 	nynCrypto "nyn/internal/crypto"
 	nynDevice "nyn/internal/device"
@@ -22,9 +18,11 @@ type Config struct {
 	General struct {
 		ScheduleCallback bool `toml:"schedule_callback"`
 	} `toml:"general"`
-	Encryption struct {
-		DecryptID string `toml:"decrypt_id"`
-	} `toml:"encryption"`
+	Crypto struct {
+		WinVer    string `toml:"win_ver"`
+		ClientVer string `toml:"client_ver"`
+		ClientKey string `toml:"client_key"`
+	} `toml:"crypto"`
 	Auth []struct {
 		User     string `toml:"user"`
 		Password string `toml:"password"`
@@ -63,17 +61,26 @@ func main() {
 	  } // what if weekend is work day? maybe network stays? never mind
 	  if !isWeekend(today) && !isTodayHoliday {
 	    log.Println("Schedule start at 08 AM")
-	  }*/
+	  }
+	*/
+
+	cryptoInfo := nynCrypto.H3CInfoDefault
+	cryptoInfo.WinVer = []byte(config.Crypto.WinVer)
+	//cryptoInfo.Version = []byte(config.Crypto.ClientVer)
+	cryptoInfo.Key = []byte(config.Crypto.ClientKey)
 
 	var authServices []nynAuth.AuthService
-	for _, each := range config.Auth {
+	for _, user := range config.Auth {
 		var device *nynDevice.Device
-		device, err := nynDevice.New(each.Device)
+		device, err := nynDevice.New(user.Device)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		authService := nynAuth.New(device, nynCrypto.H3CInfoDefault, each.User, each.Password)
+		authService := nynAuth.New(device,
+			cryptoInfo,
+			user.User,
+			user.Password)
 		if err = device.Start(authService); err != nil {
 			log.Fatal(err)
 		}

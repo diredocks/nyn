@@ -2,7 +2,7 @@ package nynAuth
 
 import (
 	//"net"
-	"nyn/internal/crypto"
+	nynCrypto "nyn/internal/crypto"
 )
 
 type ResponseBase struct {
@@ -27,7 +27,7 @@ type ResponseMD5 struct {
 }
 
 func (r *ResponseMD5) MarshalToBytes() []byte {
-	header := ResponseMD5SignatureHeader
+	header := []byte{byte(MD5SignatureLength)}
 	buffer := []byte{r.EapId}
 	buffer = append(buffer, r.Password...)
 	buffer = append(buffer, r.EapContent[EAPRequestHeaderLength+MD5SignatureHeaderLength:]...)
