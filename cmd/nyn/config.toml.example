@@ -1,8 +1,16 @@
 [general]
 schedule_callback = true
+wake_time = "7:00"
+sleep_time = "11:59"
+wake_callback = "wifi up"
+sleep_callback = "wifi down"
 
 [encryption]
-decrypt_id = "12"
+aes_key = []
+aes_iv = []
+win_ver = ""
+client_version = ""
+client_key = ""
 
 [[auth]]
 user = "leo"

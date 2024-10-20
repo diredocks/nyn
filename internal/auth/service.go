@@ -1,22 +1,43 @@
 package nynAuth
 
 import (
+	"fmt"
+	"net"
+	nynCrypto "nyn/internal/crypto"
+	"os"
+
+	"github.com/charmbracelet/log"
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"golang.org/x/text/encoding/simplifiedchinese"
-	"log"
-	"net"
-	"nyn/internal/crypto"
 )
 
+type logger struct {
+	server *log.Logger
+	client *log.Logger
+}
+
+func newLogger() *logger {
+	var l logger
+	l.server = log.NewWithOptions(os.Stderr, log.Options{
+		ReportTimestamp: true,
+		Prefix:          "h3c",
+	})
+	l.client = log.NewWithOptions(os.Stderr, log.Options{
+		ReportTimestamp: true,
+		Prefix:          "nyn",
+	})
+	return &l
+}
+
 // DeviceInterface defines methods for sending and receiving packets.
-// It is implemented by Package B (Device).
 type DeviceInterface interface {
 	Send(l ...gopacket.SerializableLayer) ([]byte, error)
 	SetBPFFilter(f string, a ...any) (string, error)
 	GetLocalMAC() net.HardwareAddr
 	GetTargetMAC() net.HardwareAddr
 	SetTargetMAC(mac net.HardwareAddr)
+	Stop()
 }
 
 type AuthService struct {
@@ -27,7 +48,6 @@ type AuthService struct {
 	password  string
 }
 
-// NewPacketHandler creates a new PacketHandler that depends on a device
 func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, password string) *AuthService {
 	return &AuthService{
 		device:   device,
@@ -37,64 +57,69 @@ func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, pas
 	}
 }
 
+func (as *AuthService) Stop() error {
+	_, error := as.SendSignOffPacket()
+	as.device.Stop()
+	return error
+}
+
 func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
-	//log.Println("nyn - received - ", packet.Data())
+	l := newLogger()
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
 	ethPacket, _ := ethLayer.(*layers.Ethernet)
 
 	if eapLayer := packet.Layer(layers.LayerTypeEAP); eapLayer != nil {
 		eapPacket, _ := eapLayer.(*layers.EAP)
-		log.Printf("h3c - server - [%d](%d)<%d>\n", eapPacket.Id, eapPacket.Type, eapPacket.Code)
+		l.server.Info("eap", "Id", eapPacket.Id, "Type", eapPacket.Type, "Code", eapPacket.Code)
 
 		if as.device.GetTargetMAC() == nil {
-			log.Println("h3c - server - asked first identity")
 			as.device.SetTargetMAC(ethPacket.SrcMAC)
 			as.device.SetBPFFilter("ether src %s and ether proto 0x888E", ethPacket.SrcMAC)
 			as.SendFirstIdentity(eapPacket.Id)
-			log.Println("nyn - client - answered first identity")
+			l.client.Info("answered first identity")
 			return nil // return func to avoid proceed to following logic
 		}
 
 		switch eapPacket.Code {
 		case layers.EAPCodeSuccess:
-			log.Println("nyn - client - suc (^_^)")
+			l.client.Info("suc (^_^)")
 		case layers.EAPCodeFailure:
 			if eapPacket.Type == EAPTypeMD5Failed {
+				// Convet GBK Message from Server to UTF-8
 				failMsgSize := eapPacket.TypeData[0]
 				failMsg, _ := simplifiedchinese.GBK.NewDecoder().Bytes(eapPacket.TypeData[1 : failMsgSize-1])
-				log.Printf("nyn - server - %s\n", failMsg)
-				log.Fatal("nyn - client = fal (o.0)")
+				l.server.Error(fmt.Sprintf("%s", failMsg))
+				l.client.Fatal("fal (o.0)")
 			} else {
-				log.Fatal("nyn - client = maybe we should re-auth?")
+				l.client.Fatal("maybe we should re-auth?")
 			}
 		case layers.EAPCodeRequest:
-			log.Println("h3c - server - asking...")
+			l.server.Info("asking...")
 		case EAPCodeH3CData:
 			if eapPacket.TypeData[H3CIntegrityChanllengeHeader-1] == 0x35 {
-				log.Println("h3c - server - integrity challange")
+				// Generate ChallangeResponse
 				var err error
 				as.h3cBuffer, err = as.h3cInfo.ChallangeResponse(
 					eapPacket.TypeData[H3CIntegrityChanllengeHeader:][:H3CIntegrityChanllengeLength])
 				if err != nil {
-					log.Fatal("nyn - client - ", err)
+					l.client.Fatal(err)
 				}
-				log.Println("nyn - client - integrity set")
+				l.client.Info("integrity set")
 			}
 		default:
-			log.Println("nyn - client - unknow eap code ^ ")
+			l.client.Warn("unknow eap code")
 		}
 
 		switch eapPacket.Type {
 		case layers.EAPTypeNone:
-			log.Println("h3c - server - suc or fal")
+			l.server.Info("suc/fal")
 		case layers.EAPTypeOTP:
-			log.Println("h3c - server - asked md5otp")
 			as.SendResponseMD5(eapPacket.Id, eapPacket.Contents)
-			log.Println("nyn - client - answered md5otp")
+			l.client.Info("answered md5otp")
 		case layers.EAPTypeIdentity:
-			log.Println("h3c - server - asked identity")
+			l.server.Info("asked identity")
 		default:
-			log.Println("nyn - client - unknow eap type ^ ")
+			l.client.Warn("unknow eap type")
 		}
 	}
 

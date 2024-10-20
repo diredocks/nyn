@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"reflect"
-	"strings"
 	"time"
 )
 
@@ -16,17 +14,6 @@ type Holiday struct {
 		Date     string `json:"date"`
 		IsOffDay bool   `json:"isOffDay"`
 	} `json:"days"` // Nested Day struct
-}
-
-func getFieldNames(s interface{}) []string {
-	val := reflect.ValueOf(s)
-	typ := val.Type()
-
-	var fieldNames []string
-	for i := 0; i < val.NumField(); i++ {
-		fieldNames = append(fieldNames, strings.ToLower(typ.Field(i).Name))
-	}
-	return fieldNames
 }
 
 func isWeekend(t time.Time) bool {

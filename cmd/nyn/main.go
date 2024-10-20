@@ -3,21 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
-	/*
-	  "time"
 
-	*/
-	"github.com/BurntSushi/toml"
-	"nyn/internal/auth"
-	"nyn/internal/crypto"
-	"nyn/internal/device"
+	//"log"
+
+	//"time"
+	nynAuth "nyn/internal/auth"
+	nynCrypto "nyn/internal/crypto"
+	nynDevice "nyn/internal/device"
+
 	"os"
 	"os/signal"
-	"syscall"
+
+	"github.com/BurntSushi/toml"
+	"github.com/charmbracelet/log"
 )
 
-// Config represents the structure of your TOML file.
 type Config struct {
 	General struct {
 		ScheduleCallback bool `toml:"schedule_callback"`
@@ -65,36 +65,33 @@ func main() {
 	    log.Println("Schedule start at 08 AM")
 	  }*/
 
-	var interfaces []authInterface
+	var authServices []nynAuth.AuthService
 	for _, each := range config.Auth {
 		var device *nynDevice.Device
 		device, err := nynDevice.New(each.Device)
 		if err != nil {
-			log.Fatal("Failed to intialize device: ", err)
+			log.Fatal(err)
 		}
 
 		authService := nynAuth.New(device, nynCrypto.H3CInfoDefault, each.User, each.Password)
 		if err = device.Start(authService); err != nil {
-			log.Fatal("Failed to intialize device: ", err)
+			log.Fatal(err)
 		}
-    authService.SendStartPacket()
-
-		interfaces = append(interfaces, authInterface{
-			Auth:   authService,
-			Device: device})
+		authService.SendStartPacket()
+		authServices = append(authServices, *authService)
 	}
 
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigs, os.Interrupt)
 	for {
 		select {
 		case sig := <-sigs:
+			_ = sig
 			fmt.Printf("\r")
-			log.Printf("nyn - signal: %s. bye!", sig)
-      for _, interfaced := range interfaces {
-        interfaced.Auth.SendSignOffPacket()
-        interfaced.Device.Stop()
-      }
+			log.Info("bye!")
+			for _, eachService := range authServices {
+				eachService.Stop()
+			}
 			return
 		}
 	}
