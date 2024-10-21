@@ -12,6 +12,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/charmbracelet/log"
+	"github.com/gopacket/gopacket/pcap"
 )
 
 type Config struct {
@@ -24,9 +25,10 @@ type Config struct {
 		ClientKey string `toml:"client_key"`
 	} `toml:"crypto"`
 	Auth []struct {
-		User     string `toml:"user"`
-		Password string `toml:"password"`
-		Device   string `toml:"device"`
+		User                string `toml:"user"`
+		Password            string `toml:"password"`
+		Device              string `toml:"device"`
+		HardwareDescription string `toml:"hardware_description"`
 	} `toml:"auth"`
 }
 
@@ -36,9 +38,23 @@ type authInterface struct {
 }
 
 func main() {
-	// load and parse config.toml
+	mode := flag.String("mode", "", "Use -mode info to see hardware description")
 	filePath := flag.String("config", "config.toml", "Path to the config")
 	flag.Parse()
+	// Show hardware_description to make Windows users happy
+	if *mode == "info" {
+		devices, error := pcap.FindAllDevs()
+		if error != nil {
+			log.Fatal(error)
+		}
+		for _, device := range devices {
+			log.Info("Found",
+				"device", device.Name,
+				"hardware_description", device.Description)
+		}
+		return
+	}
+	// load and parse config.toml
 	if *filePath == "" {
 		log.Fatal("Please provide a config path using the -config flag")
 	}
@@ -72,7 +88,7 @@ func main() {
 	var authServices []nynAuth.AuthService
 	for _, user := range config.Auth {
 		var device *nynDevice.Device
-		device, err := nynDevice.New(user.Device)
+		device, err := nynDevice.New(user.Device, user.HardwareDescription)
 		if err != nil {
 			log.Fatal(err)
 		}

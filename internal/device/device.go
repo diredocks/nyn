@@ -11,11 +11,12 @@ import (
 )
 
 type Device struct {
-	TargetMAC net.HardwareAddr
-	localMAC  net.HardwareAddr
-	ifaceName string
-	handle    *pcap.Handle
-	done      chan int
+	TargetMAC           net.HardwareAddr
+	localMAC            net.HardwareAddr
+	ifaceName           string
+	handle              *pcap.Handle
+	done                chan int
+	hardwareDescription string // to make npcap happy
 }
 
 func getAddr(ifaceName string) (net.HardwareAddr, net.IP, error) {
@@ -34,22 +35,26 @@ func (d *Device) SetBPFFilter(f string, a ...any) (string, error) {
 	return f, nil
 }
 
-func New(ifaceName string) (*Device, error) {
+func New(ifaceName string, hardwareDescription string) (*Device, error) {
 	mac, _, err := getAddr(ifaceName)
 	if err != nil {
 		return nil, fmt.Errorf("%v: %s", err, ifaceName)
 	}
 
 	return &Device{
-		localMAC:  mac,
-		ifaceName: ifaceName,
-		done:      make(chan int),
+		localMAC:            mac,
+		ifaceName:           ifaceName,
+		hardwareDescription: hardwareDescription,
+		done:                make(chan int),
 	}, nil
 }
 
 func (d *Device) Start(as *nynAuth.AuthService) error {
 	var err error
 	d.handle, err = pcap.OpenLive(d.ifaceName, 1600, false, time.Millisecond)
+	if d.hardwareDescription != "" {
+		d.handle, err = pcap.OpenLive(d.hardwareDescription, 1600, false, time.Millisecond)
+	} // npcap needs hardware description to open devicd
 	if err != nil {
 		return err
 	}
