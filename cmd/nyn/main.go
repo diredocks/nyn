@@ -8,7 +8,6 @@ import (
 	nynDevice "nyn/internal/device"
 	"os"
 	"os/signal"
-	"slices"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -121,12 +120,15 @@ func main() {
 			}
 			return
 		case <-timeout:
-			for i, eachService := range authServices {
+			noResponseLen := 0
+			for _, eachService := range authServices {
 				if eachService.Device.GetTargetMAC() == nil {
-					eachService.Device.Stop()
-					authServices = slices.Delete(authServices, i, i+1)
 					log.Error("No server response from", "device", eachService.Device.GetIfaceName())
+					noResponseLen = noResponseLen + 1
 				}
+			}
+			if len(authServices) == noResponseLen {
+				log.Fatal("No active interface, exiting...")
 			}
 		}
 	}
