@@ -6,7 +6,7 @@ import (
 
 func (as *AuthService) SendStartPacket() ([]byte, error) {
 	ethLayer := &layers.Ethernet{
-		SrcMAC:       as.device.GetLocalMAC(),
+		SrcMAC:       as.Device.GetLocalMAC(),
 		DstMAC:       BroadcastAddr,
 		EthernetType: layers.EthernetTypeEAPOL,
 	}
@@ -14,12 +14,12 @@ func (as *AuthService) SendStartPacket() ([]byte, error) {
 		Version: 0x01,
 		Type:    layers.EAPOLTypeStart,
 	}
-	return as.device.Send(ethLayer, eapolLayer)
+	return as.Device.Send(ethLayer, eapolLayer)
 }
 
 func (as *AuthService) SendSignOffPacket() ([]byte, error) {
 	ethLayer := &layers.Ethernet{
-		SrcMAC:       as.device.GetLocalMAC(),
+		SrcMAC:       as.Device.GetLocalMAC(),
 		DstMAC:       MultcastAddr,
 		EthernetType: layers.EthernetTypeEAPOL,
 	}
@@ -27,7 +27,7 @@ func (as *AuthService) SendSignOffPacket() ([]byte, error) {
 		Version: 0x01,
 		Type:    layers.EAPOLTypeLogOff,
 	}
-	return as.device.Send(ethLayer, eapolLayer)
+	return as.Device.Send(ethLayer, eapolLayer)
 }
 
 func (as *AuthService) SendFirstIdentity(eapId uint8) ([]byte, error) {
@@ -38,8 +38,8 @@ func (as *AuthService) SendFirstIdentity(eapId uint8) ([]byte, error) {
 	}
 	responseData := response.MarshalToBytes()
 	ethLayer := &layers.Ethernet{
-		SrcMAC:       as.device.GetLocalMAC(),
-		DstMAC:       as.device.GetTargetMAC(),
+		SrcMAC:       as.Device.GetLocalMAC(),
+		DstMAC:       as.Device.GetTargetMAC(),
 		EthernetType: layers.EthernetTypeEAPOL,
 	}
 	eapolLayer := &layers.EAPOL{
@@ -54,7 +54,7 @@ func (as *AuthService) SendFirstIdentity(eapId uint8) ([]byte, error) {
 		TypeData: responseData,
 		Length:   eapolLayer.Length,
 	}
-	return as.device.Send(ethLayer, eapolLayer, eapLayer)
+	return as.Device.Send(ethLayer, eapolLayer, eapLayer)
 }
 
 func (as *AuthService) SendResponseMD5(eapId uint8, eapContent []byte) ([]byte, error) {
@@ -68,8 +68,8 @@ func (as *AuthService) SendResponseMD5(eapId uint8, eapContent []byte) ([]byte, 
 	}
 	responseData := response.MarshalToBytes()
 	ethLayer := &layers.Ethernet{
-		SrcMAC:       as.device.GetLocalMAC(),
-		DstMAC:       as.device.GetTargetMAC(),
+		SrcMAC:       as.Device.GetLocalMAC(),
+		DstMAC:       as.Device.GetTargetMAC(),
 		EthernetType: layers.EthernetTypeEAPOL,
 	}
 	eapolLayer := &layers.EAPOL{
@@ -84,5 +84,5 @@ func (as *AuthService) SendResponseMD5(eapId uint8, eapContent []byte) ([]byte, 
 		TypeData: responseData,
 		Length:   eapolLayer.Length,
 	}
-	return as.device.Send(ethLayer, eapolLayer, eapLayer)
+	return as.Device.Send(ethLayer, eapolLayer, eapLayer)
 }

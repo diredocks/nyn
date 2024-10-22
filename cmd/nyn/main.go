@@ -6,9 +6,10 @@ import (
 	nynAuth "nyn/internal/auth"
 	nynCrypto "nyn/internal/crypto"
 	nynDevice "nyn/internal/device"
-
 	"os"
 	"os/signal"
+	"slices"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/charmbracelet/log"
@@ -18,6 +19,7 @@ import (
 type Config struct {
 	General struct {
 		ScheduleCallback bool `toml:"schedule_callback"`
+		TimeOut          int  `toml:"timeout"`
 	} `toml:"general"`
 	Crypto struct {
 		WinVer    string `toml:"win_ver"`
@@ -82,7 +84,7 @@ func main() {
 
 	cryptoInfo := nynCrypto.H3CInfoDefault
 	cryptoInfo.WinVer = []byte(config.Crypto.WinVer)
-	//cryptoInfo.Version = []byte(config.Crypto.ClientVer)
+	// cryptoInfo.Version = []byte(config.Crypto.ClientVer)
 	cryptoInfo.Key = []byte(config.Crypto.ClientKey)
 
 	var authServices []nynAuth.AuthService
@@ -106,6 +108,8 @@ func main() {
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt)
+	timeout := time.After(time.Duration(config.General.TimeOut) * time.Second)
+
 	for {
 		select {
 		case sig := <-sigs:
@@ -116,6 +120,14 @@ func main() {
 				eachService.Stop()
 			}
 			return
+		case <-timeout:
+			for i, eachService := range authServices {
+				if eachService.Device.GetTargetMAC() == nil {
+					eachService.Device.Stop()
+					authServices = slices.Delete(authServices, i, i+1)
+					log.Error("No server response from", "device", eachService.Device.GetIfaceName())
+				}
+			}
 		}
 	}
 }

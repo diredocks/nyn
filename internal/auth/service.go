@@ -38,11 +38,12 @@ type DeviceInterface interface {
 	GetLocalMAC() net.HardwareAddr
 	GetTargetMAC() net.HardwareAddr
 	SetTargetMAC(mac net.HardwareAddr)
+	GetIfaceName() string
 	Stop()
 }
 
 type AuthService struct {
-	device    DeviceInterface
+	Device    DeviceInterface
 	h3cInfo   nynCrypto.H3CInfo
 	h3cBuffer []byte
 	username  string
@@ -51,7 +52,7 @@ type AuthService struct {
 
 func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, password string) *AuthService {
 	return &AuthService{
-		device:   device,
+		Device:   device,
 		h3cInfo:  h3cInfo,
 		username: username,
 		password: password,
@@ -60,7 +61,7 @@ func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, pas
 
 func (as *AuthService) Stop() error {
 	_, error := as.SendSignOffPacket()
-	as.device.Stop()
+	as.Device.Stop()
 	return error
 }
 
@@ -73,9 +74,9 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		eapPacket, _ := eapLayer.(*layers.EAP)
 		l.server.Info("eap", "Id", eapPacket.Id, "Type", eapPacket.Type, "Code", eapPacket.Code)
 
-		if as.device.GetTargetMAC() == nil {
-			as.device.SetTargetMAC(ethPacket.SrcMAC)
-			as.device.SetBPFFilter("ether src %s and ether proto 0x888E", ethPacket.SrcMAC)
+		if as.Device.GetTargetMAC() == nil {
+			as.Device.SetTargetMAC(ethPacket.SrcMAC)
+			as.Device.SetBPFFilter("ether src %s and ether proto 0x888E", ethPacket.SrcMAC)
 			as.SendFirstIdentity(eapPacket.Id)
 			l.client.Info("answered first identity")
 			return nil // return func to avoid proceed to following logic

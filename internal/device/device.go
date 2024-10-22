@@ -108,6 +108,11 @@ func (d *Device) GetLocalMAC() net.HardwareAddr {
 func (d *Device) GetTargetMAC() net.HardwareAddr {
 	return d.TargetMAC
 }
+
 func (d *Device) SetTargetMAC(mac net.HardwareAddr) {
 	d.TargetMAC = mac
+}
+
+func (d *Device) GetIfaceName() string {
+	return d.ifaceName
 }
