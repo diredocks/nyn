@@ -1,7 +1,7 @@
 package nynAuth
 
 import (
-	//"net"
+	"net"
 	nynCrypto "nyn/internal/crypto"
 )
 
@@ -35,4 +35,10 @@ func (r *ResponseMD5) MarshalToBytes() []byte {
 	data := append(header, buffer...)
 	data = append(data, r.Username...)
 	return data
+}
+
+type ResponseIdentity struct {
+	ResponseBase
+	IP                net.IPAddr
+	ChallengeResponse []byte
 }
