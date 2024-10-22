@@ -114,10 +114,11 @@ func main() {
 		case sig := <-sigs:
 			_ = sig
 			fmt.Printf("\r")
-			log.Info("bye!")
 			for _, eachService := range authServices {
 				eachService.Stop()
+				log.Warn("Stopped", "device", eachService.Device.GetIfaceName())
 			}
+			log.Info("bye!")
 			return
 		case <-timeout:
 			noResponseLen := 0
