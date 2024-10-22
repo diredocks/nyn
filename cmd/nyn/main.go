@@ -61,7 +61,7 @@ func main() {
 
 	var config Config
 	// Decode the TOML file into the config struct
-	if _, err := toml.DecodeFile("config.toml", &config); err != nil {
+	if _, err := toml.DecodeFile(*filePath, &config); err != nil {
 		log.Fatalf("Error decoding TOML file: %v", err)
 	}
 
