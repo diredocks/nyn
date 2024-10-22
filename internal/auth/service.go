@@ -39,6 +39,7 @@ type DeviceInterface interface {
 	GetTargetMAC() net.HardwareAddr
 	SetTargetMAC(mac net.HardwareAddr)
 	GetIfaceName() string
+	GetIP() net.IP
 	Stop()
 }
 
@@ -119,7 +120,8 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 			as.SendResponseMD5(eapPacket.Id, eapPacket.Contents)
 			l.client.Info("answered md5otp")
 		case layers.EAPTypeIdentity:
-			l.server.Info("asked identity")
+			as.SendIdentity(eapPacket.Id, as.h3cBuffer)
+			l.client.Info("answered identity")
 		default:
 			l.client.Warn("unknow eap", "Type", eapPacket.Type)
 		}

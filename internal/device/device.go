@@ -13,6 +13,7 @@ import (
 type Device struct {
 	TargetMAC           net.HardwareAddr
 	localMAC            net.HardwareAddr
+	ip                  net.IP
 	ifaceName           string
 	handle              *pcap.Handle
 	done                chan int
@@ -24,7 +25,18 @@ func getAddr(ifaceName string) (net.HardwareAddr, net.IP, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return iface.HardwareAddr, nil, nil // TODO: Fill in the ip declearation
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, addr := range addrs {
+		if v, ok := addr.(*net.IPNet); ok && !v.IP.IsLoopback() {
+			if v.IP.To4() != nil {
+				return iface.HardwareAddr, v.IP.To4(), nil
+			}
+		}
+	}
+	return iface.HardwareAddr, nil, nil
 }
 
 func (d *Device) SetBPFFilter(f string, a ...any) (string, error) {
@@ -36,13 +48,14 @@ func (d *Device) SetBPFFilter(f string, a ...any) (string, error) {
 }
 
 func New(ifaceName string, hardwareDescription string) (*Device, error) {
-	mac, _, err := getAddr(ifaceName)
+	mac, ip, err := getAddr(ifaceName)
 	if err != nil {
 		return nil, fmt.Errorf("%v: %s", err, ifaceName)
 	}
 
 	return &Device{
 		localMAC:            mac,
+		ip:                  ip,
 		ifaceName:           ifaceName,
 		hardwareDescription: hardwareDescription,
 		done:                make(chan int),
@@ -115,4 +128,8 @@ func (d *Device) SetTargetMAC(mac net.HardwareAddr) {
 
 func (d *Device) GetIfaceName() string {
 	return d.ifaceName
+}
+
+func (d *Device) GetIP() net.IP {
+	return d.ip
 }

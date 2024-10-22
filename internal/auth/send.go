@@ -86,3 +86,34 @@ func (as *AuthService) SendResponseMD5(eapId uint8, eapContent []byte) ([]byte, 
 	}
 	return as.Device.Send(ethLayer, eapolLayer, eapLayer)
 }
+
+func (as *AuthService) SendIdentity(eapId uint8, challengeResponse []byte) ([]byte, error) {
+	response := ResponseIdentity{
+		ResponseBase: ResponseBase{
+			H3CInfo:  as.h3cInfo,
+			Username: []byte(as.username),
+			Password: []byte(as.password),
+		},
+		IP:                as.Device.GetIP(),
+		ChallengeResponse: challengeResponse,
+	}
+	responseData := response.MarshalToBytes()
+	ethLayer := &layers.Ethernet{
+		SrcMAC:       as.Device.GetLocalMAC(),
+		DstMAC:       as.Device.GetTargetMAC(),
+		EthernetType: layers.EthernetTypeEAPOL,
+	}
+	eapolLayer := &layers.EAPOL{
+		Version: 0x01,
+		Type:    layers.EAPOLTypeEAP,
+		Length:  uint16(len(responseData) + EAPResponseHeaderLength),
+	}
+	eapLayer := &layers.EAP{
+		Code:     layers.EAPCodeResponse,
+		Id:       eapId,
+		Type:     layers.EAPTypeIdentity,
+		TypeData: responseData,
+		Length:   eapolLayer.Length,
+	}
+	return as.Device.Send(ethLayer, eapolLayer, eapLayer)
+}

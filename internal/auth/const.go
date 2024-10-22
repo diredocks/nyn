@@ -6,9 +6,8 @@ import (
 	"github.com/gopacket/gopacket/layers"
 )
 
-//type EAPType uint8
-//type EAPCode uint8
-
+// type EAPType uint8
+// type EAPCode uint8
 var (
 	EAPCodeH3CData layers.EAPCode = 10
 
@@ -17,7 +16,9 @@ var (
 	EAPTypeAvaliable layers.EAPType = 20
 	EAPTypeMD5Failed layers.EAPType = 9
 
-	ResponseVersionHeader = []byte{0x06, 0x07}
+	ResponseVersionHeader  = []byte{0x06, 0x07}
+	ResponseIdentityHeader = []byte{0x16, 0x20}
+	ResponseIPHeader       = []byte{0x15, 0x04}
 )
 
 const (

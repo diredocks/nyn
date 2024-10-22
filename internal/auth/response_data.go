@@ -39,6 +39,15 @@ func (r *ResponseMD5) MarshalToBytes() []byte {
 
 type ResponseIdentity struct {
 	ResponseBase
-	IP                net.IPAddr
+	IP                net.IP
 	ChallengeResponse []byte
+}
+
+func (r *ResponseIdentity) MarshalToBytes() []byte {
+	data := ResponseIdentityHeader
+	data = append(data, r.ChallengeResponse...)
+	data = append(data, ResponseIPHeader...)
+	data = append(data, r.IP...)
+	data = append(data, r.ResponseBase.MarshalToBytes()...)
+	return data
 }
