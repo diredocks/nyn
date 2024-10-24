@@ -28,6 +28,7 @@
 
             # goimports, godoc, etc.
             gotools
+            graphviz
 
             # https://github.com/golangci/golangci-lint
             golangci-lint

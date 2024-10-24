@@ -19,6 +19,7 @@ type Config struct {
 	General struct {
 		ScheduleCallback bool `toml:"schedule_callback"`
 		TimeOut          int  `toml:"timeout"`
+		Retry            int  `toml:"retry"`
 	} `toml:"general"`
 	Crypto struct {
 		WinVer    string `toml:"win_ver"`
@@ -97,7 +98,8 @@ func main() {
 		authService := nynAuth.New(device,
 			cryptoInfo,
 			user.User,
-			user.Password)
+			user.Password,
+			config.General.Retry)
 		if err = device.Start(authService); err != nil {
 			log.Fatal(err)
 		}

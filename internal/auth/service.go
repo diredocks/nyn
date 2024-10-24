@@ -49,14 +49,16 @@ type AuthService struct {
 	h3cBuffer []byte
 	username  string
 	password  string
+	retry     int
 }
 
-func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, password string) *AuthService {
+func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, password string, retry int) *AuthService {
 	return &AuthService{
 		Device:   device,
 		h3cInfo:  h3cInfo,
 		username: username,
 		password: password,
+		retry:    retry,
 	}
 }
 
@@ -94,7 +96,13 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 				l.server.Error(fmt.Sprintf("%s", failMsg))
 				l.client.Fatal("fal (o.0)")
 			} else {
-				l.client.Fatal("maybe we should re-auth?")
+				if as.retry > 0 {
+					as.retry = as.retry - 1
+					l.client.Error("an error occured qwq! remaining", "retry", as.retry)
+					as.SendStartPacket()
+				} else {
+					l.client.Fatal("retry ran out, maybe we should re-auth?")
+				}
 			}
 		case layers.EAPCodeRequest:
 			l.server.Info("asking for something...")
@@ -105,9 +113,11 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 				as.h3cBuffer, err = as.h3cInfo.ChallangeResponse(
 					eapPacket.TypeData[H3CIntegrityChanllengeHeader:][:H3CIntegrityChanllengeLength])
 				if err != nil {
-					l.client.Fatal(err)
+					l.client.Error("failed to set integrity")
+					l.client.Error(err)
+				} else {
+					l.client.Info("integrity set")
 				}
-				l.client.Info("integrity set")
 			}
 		default:
 			l.client.Warn("unknow eap", "Code", eapPacket.Code)
