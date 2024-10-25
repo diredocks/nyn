@@ -109,13 +109,13 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		case EAPCodeH3CData:
 			if eapPacket.TypeData[H3CIntegrityChanllengeHeader-1] == 0x35 {
 				// Generate ChallangeResponse
-				var err error
-				as.h3cBuffer, err = as.h3cInfo.ChallangeResponse(
+				buffer, err := as.h3cInfo.ChallangeResponse(
 					eapPacket.TypeData[H3CIntegrityChanllengeHeader:][:H3CIntegrityChanllengeLength])
 				if err != nil {
 					l.client.Error("failed to set integrity")
 					l.client.Error(err)
 				} else {
+					as.h3cBuffer = buffer
 					l.client.Info("integrity set")
 				}
 			}
