@@ -11,10 +11,11 @@ import (
 var (
 	EAPCodeH3CData layers.EAPCode = 10
 
-	EAPTypeMD5       layers.EAPType = 4
-	EAPTypeAllocated layers.EAPType = 7
-	EAPTypeAvaliable layers.EAPType = 20
-	EAPTypeMD5Failed layers.EAPType = 9
+	EAPTypeMD5             layers.EAPType = 4
+	EAPTypeAllocated       layers.EAPType = 7
+	EAPTypeAvaliable       layers.EAPType = 20
+	EAPTypeMD5Failed       layers.EAPType = 9
+	EAPTypeInactiveKickoff layers.EAPType = 8
 
 	ResponseVersionHeader  = []byte{0x06, 0x07}
 	ResponseIdentityHeader = []byte{0x16, 0x20}

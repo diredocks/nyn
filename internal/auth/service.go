@@ -50,6 +50,7 @@ type AuthService struct {
 	username  string
 	password  string
 	retry     int
+	isOnline  bool
 }
 
 func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, password string, retry int) *AuthService {
@@ -59,6 +60,7 @@ func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, pas
 		username: username,
 		password: password,
 		retry:    retry,
+		isOnline: false,
 	}
 }
 
@@ -80,8 +82,12 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		if as.Device.GetTargetMAC() == nil {
 			as.Device.SetTargetMAC(ethPacket.SrcMAC)
 			as.Device.SetBPFFilter("ether src %s and ether proto 0x888E", ethPacket.SrcMAC)
+		}
+
+		if !as.isOnline {
 			as.SendFirstIdentity(eapPacket.Id)
 			l.client.Info("answered first identity")
+			as.isOnline = true
 			return nil // return func to avoid proceed to following logic
 		}
 
@@ -89,16 +95,23 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		case layers.EAPCodeSuccess:
 			l.client.Info("suc (^_^)")
 		case layers.EAPCodeFailure:
-			if eapPacket.Type == EAPTypeMD5Failed {
+			switch eapPacket.Type {
+			case EAPTypeMD5Failed:
 				// Convet GBK Message from Server to UTF-8
 				failMsgSize := eapPacket.TypeData[0]
 				failMsg, _ := simplifiedchinese.GBK.NewDecoder().Bytes(eapPacket.TypeData[1 : failMsgSize-1])
 				l.server.Error(fmt.Sprintf("%s", failMsg))
 				l.client.Fatal("fal (o.0)")
-			} else {
+			case EAPTypeInactiveKickoff:
+				l.server.Error("inactive kick off... 0w0!")
+				l.client.Info("auto restart now!")
+				as.isOnline = false
+				as.SendStartPacket()
+			default:
 				if as.retry > 0 {
 					as.retry = as.retry - 1
 					l.client.Error("an error occured qwq! remaining", "retry", as.retry)
+					as.isOnline = false
 					as.SendStartPacket()
 				} else {
 					l.client.Fatal("retry ran out, maybe we should re-auth?")
