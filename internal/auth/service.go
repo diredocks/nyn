@@ -120,7 +120,8 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		case layers.EAPCodeRequest:
 			l.server.Info("asking for something...")
 		case EAPCodeH3CData:
-			if eapPacket.TypeData[H3CIntegrityChanllengeHeader-1] == 0x35 {
+			if eapPacket.TypeData[H3CIntegrityChanllengeHeader-1] == 0x35 &&
+				eapPacket.TypeData[H3CIntegrityChanllengeHeader-2] == 0x2b {
 				// Generate ChallangeResponse
 				buffer, err := as.h3cInfo.ChallangeResponse(
 					eapPacket.TypeData[H3CIntegrityChanllengeHeader:][:H3CIntegrityChanllengeLength])
