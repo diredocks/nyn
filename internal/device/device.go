@@ -110,6 +110,9 @@ func (d *Device) Send(l ...gopacket.SerializableLayer) ([]byte, error) {
 	if err := d.handle.WritePacketData(buffer.Bytes()); err != nil {
 		return nil, err
 	}
+	if err := d.handle.WritePacketData(buffer.Bytes()); err != nil {
+		return nil, err
+	}
 
 	return buffer.Bytes(), nil
 }
