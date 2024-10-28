@@ -81,7 +81,7 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 
 		if as.Device.GetTargetMAC() == nil {
 			as.Device.SetTargetMAC(ethPacket.SrcMAC)
-			as.Device.SetBPFFilter("ether src %s and (ether dst %s or ether dst %s) and ether proto 0x888E", ethPacket.SrcMAC, as.Device.GetLocalMAC(), BridgeAddr)
+			as.Device.SetBPFFilter("ether src %s and (ether dst %s or ether dst %s) and ether proto 0x888E", ethPacket.SrcMAC, as.Device.GetLocalMAC(), MultcastAddr)
 		}
 
 		if !as.isOnline {

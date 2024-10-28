@@ -29,20 +29,19 @@ func (i *H3CInfo) ChallangeResponse(challenge []byte) ([]byte, error) {
 	}
 	dictExtractionMD5 := ComputeMD5Hash(dictExtraction)
 
-	var deDecryptedChallenge []byte
-	deDecryptedChallenge, err = aes128Decryption(last16Bytes, dictExtractionMD5, i.AesIV)
+	deDecryptedChallenge, err := aes128Decryption(last16Bytes, dictExtractionMD5, i.AesIV)
 	if err != nil {
 		return nil, err
 	}
 
 	responseChallenge := append(first16Bytes, deDecryptedChallenge...)
 
-	info = DictInfo{
+	info2 := DictInfo{
 		Index:  deDecryptedChallenge[10:14],
 		Offset: deDecryptedChallenge[14],
 		Length: deDecryptedChallenge[15],
 	}
-	dictExtraction2, err := extractFromDict(info, i.Dict)
+	dictExtraction2, err := extractFromDict(info2, i.Dict)
 	if err != nil {
 		return nil, err
 	}
