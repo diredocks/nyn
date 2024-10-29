@@ -7,7 +7,7 @@ import (
 func (as *AuthService) SendStartPacket() ([]byte, error) {
 	ethLayer := &layers.Ethernet{
 		SrcMAC:       as.Device.GetLocalMAC(),
-		DstMAC:       MultcastAddr,
+		DstMAC:       BroadcastAddr,
 		EthernetType: layers.EthernetTypeEAPOL,
 	}
 	eapolLayer := &layers.EAPOL{

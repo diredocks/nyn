@@ -75,80 +75,83 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 	ethLayer := packet.Layer(layers.LayerTypeEthernet)
 	ethPacket, _ := ethLayer.(*layers.Ethernet)
 
-	if eapLayer := packet.Layer(layers.LayerTypeEAP); eapLayer != nil {
-		eapPacket, _ := eapLayer.(*layers.EAP)
-		l.server.Info("eap", "Id", eapPacket.Id, "Type", eapPacket.Type, "Code", eapPacket.Code)
+	eapLayer := packet.Layer(layers.LayerTypeEAP)
+	if eapLayer == nil {
+		return nil
+	}
 
-		if as.Device.GetTargetMAC() == nil {
-			as.Device.SetTargetMAC(ethPacket.SrcMAC)
-			as.Device.SetBPFFilter("ether src %s and (ether dst %s or ether dst %s) and ether proto 0x888E", ethPacket.SrcMAC, as.Device.GetLocalMAC(), MultcastAddr)
-		}
+	eapPacket, _ := eapLayer.(*layers.EAP)
+	l.server.Info("eap", "Id", eapPacket.Id, "Type", eapPacket.Type, "Code", eapPacket.Code)
 
-		if !as.isOnline {
-			as.SendFirstIdentity(eapPacket.Id)
-			l.client.Info("answered first identity")
-			as.isOnline = true
-			return nil // return func to avoid proceed to following logic
-		}
+	if as.Device.GetTargetMAC() == nil {
+		as.Device.SetTargetMAC(ethPacket.SrcMAC)
+		as.Device.SetBPFFilter("ether src %s and (ether dst %s or ether dst %s) and ether proto 0x888E", ethPacket.SrcMAC, as.Device.GetLocalMAC(), MultcastAddr)
+	}
 
-		switch eapPacket.Code {
-		case layers.EAPCodeSuccess:
-			l.client.Info("suc (^_^)")
-		case layers.EAPCodeFailure:
-			switch eapPacket.Type {
-			case EAPTypeMD5Failed:
-				// Convet GBK Message from Server to UTF-8
-				failMsgSize := eapPacket.TypeData[0]
-				failMsg, _ := simplifiedchinese.GBK.NewDecoder().Bytes(eapPacket.TypeData[1 : failMsgSize-1])
-				l.server.Error(fmt.Sprintf("%s", failMsg))
-				l.client.Fatal("fal (o.0)")
-			case EAPTypeInactiveKickoff:
-				l.server.Error("inactive kick off... 0w0!")
-				l.client.Info("auto restart now!")
+	if !as.isOnline {
+		as.SendFirstIdentity(eapPacket.Id)
+		l.client.Info("answered first identity")
+		as.isOnline = true
+		return nil // return func to avoid proceed to following logic
+	}
+
+	switch eapPacket.Code {
+	case layers.EAPCodeSuccess:
+		l.client.Info("suc (^_^)")
+	case layers.EAPCodeFailure:
+		switch eapPacket.Type {
+		case EAPTypeMD5Failed:
+			// Convet GBK Message from Server to UTF-8
+			failMsgSize := eapPacket.TypeData[0]
+			failMsg, _ := simplifiedchinese.GBK.NewDecoder().Bytes(eapPacket.TypeData[1 : failMsgSize-1])
+			l.server.Error(fmt.Sprintf("%s", failMsg))
+			l.client.Fatal("fal (o.0)")
+		case EAPTypeInactiveKickoff:
+			l.server.Error("inactive kick off... 0w0!")
+			l.client.Info("auto restart now!")
+			as.isOnline = false
+			as.SendStartPacket()
+		default:
+			if as.retry > 0 {
+				as.retry = as.retry - 1
+				l.client.Error("an error occured qwq! remaining", "retry", as.retry)
 				as.isOnline = false
 				as.SendStartPacket()
-			default:
-				if as.retry > 0 {
-					as.retry = as.retry - 1
-					l.client.Error("an error occured qwq! remaining", "retry", as.retry)
-					as.isOnline = false
-					as.SendStartPacket()
-				} else {
-					l.client.Fatal("retry ran out, maybe we should re-auth?")
-				}
+			} else {
+				l.client.Fatal("retry ran out, maybe we should re-auth?")
 			}
-		case layers.EAPCodeRequest:
-			l.server.Info("asking for something...")
-		case EAPCodeH3CData:
-			if eapPacket.TypeData[H3CIntegrityChanllengeHeader-1] == 0x35 &&
-				eapPacket.TypeData[H3CIntegrityChanllengeHeader-2] == 0x2b {
-				// Generate ChallangeResponse
-				buffer, err := as.h3cInfo.ChallangeResponse(
-					eapPacket.TypeData[H3CIntegrityChanllengeHeader:][:H3CIntegrityChanllengeLength])
-				if err != nil {
-					l.client.Error("failed to set integrity")
-					l.client.Error(err)
-				} else {
-					as.h3cBuffer = buffer
-					l.client.Info("integrity set")
-				}
-			}
-		default:
-			l.client.Warn("unknow eap", "Code", eapPacket.Code)
 		}
+	case layers.EAPCodeRequest:
+		l.server.Info("asking for something...")
+	case EAPCodeH3CData:
+		if eapPacket.TypeData[H3CIntegrityChanllengeHeader-1] == 0x35 &&
+			eapPacket.TypeData[H3CIntegrityChanllengeHeader-2] == 0x2b {
+			// Generate ChallangeResponse
+			buffer, err := as.h3cInfo.ChallangeResponse(
+				eapPacket.TypeData[H3CIntegrityChanllengeHeader:][:H3CIntegrityChanllengeLength])
+			if err != nil {
+				l.client.Error("failed to set integrity")
+				l.client.Error(err)
+			} else {
+				as.h3cBuffer = buffer
+				l.client.Info("integrity set")
+			}
+		}
+	default:
+		l.client.Warn("unknow eap", "Code", eapPacket.Code)
+	}
 
-		switch eapPacket.Type {
-		case layers.EAPTypeNone:
-			l.server.Info("suc/fal")
-		case layers.EAPTypeOTP:
-			as.SendResponseMD5(eapPacket.Id, eapPacket.Contents)
-			l.client.Info("answered md5otp")
-		case layers.EAPTypeIdentity:
-			as.SendIdentity(eapPacket.Id, as.h3cBuffer)
-			l.client.Info("answered identity")
-		default:
-			l.client.Warn("unknow eap", "Type", eapPacket.Type)
-		}
+	switch eapPacket.Type {
+	case layers.EAPTypeNone:
+		l.server.Info("suc/fal")
+	case layers.EAPTypeOTP:
+		as.SendResponseMD5(eapPacket.Id, eapPacket.Contents)
+		l.client.Info("answered md5otp")
+	case layers.EAPTypeIdentity:
+		as.SendIdentity(eapPacket.Id, as.h3cBuffer)
+		l.client.Info("answered identity")
+	default:
+		l.client.Warn("unknow eap", "Type", eapPacket.Type)
 	}
 
 	return nil
