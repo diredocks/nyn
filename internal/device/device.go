@@ -64,7 +64,7 @@ func New(ifaceName string, hardwareDescription string) (*Device, error) {
 
 func (d *Device) Start(as *nynAuth.AuthService) error {
 	var err error
-	d.handle, err = pcap.OpenLive(d.ifaceName, 1600, false, time.Millisecond)
+	d.handle, err = pcap.OpenLive(d.ifaceName, 1600, true, time.Millisecond)
 	if d.hardwareDescription != "" {
 		d.handle, err = pcap.OpenLive(d.hardwareDescription, 1600, false, time.Millisecond)
 	} // npcap needs hardware description to open devicd

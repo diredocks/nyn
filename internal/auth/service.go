@@ -101,7 +101,7 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 	case layers.EAPCodeFailure:
 		switch eapPacket.Type {
 		case EAPTypeMD5Failed:
-			// Convet GBK Message from Server to UTF-8
+			// Convert GBK Message from Server to UTF-8
 			failMsgSize := eapPacket.TypeData[0]
 			failMsg, _ := simplifiedchinese.GBK.NewDecoder().Bytes(eapPacket.TypeData[1 : failMsgSize-1])
 			l.server.Error(fmt.Sprintf("%s", failMsg))
@@ -127,8 +127,8 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		if eapPacket.TypeData[H3CIntegrityChanllengeHeader-1] == 0x35 &&
 			eapPacket.TypeData[H3CIntegrityChanllengeHeader-2] == 0x2b {
 			// Generate ChallangeResponse
-			buffer, err := as.h3cInfo.ChallangeResponse(
-				eapPacket.TypeData[H3CIntegrityChanllengeHeader:][:H3CIntegrityChanllengeLength])
+			challange := eapPacket.TypeData[H3CIntegrityChanllengeHeader:][:H3CIntegrityChanllengeLength]
+			buffer, err := as.h3cInfo.ChallangeResponse(challange)
 			if err != nil {
 				l.client.Error("failed to set integrity")
 				l.client.Error(err)
