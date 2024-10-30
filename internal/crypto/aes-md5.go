@@ -65,6 +65,7 @@ func extractFromDict(info DictInfo, h3c_dict map[[4]byte][]byte) ([]byte, error)
 	if !exists {
 		return nil, fmt.Errorf("The key: %x doesn't exists in the key-map(h3c_dict)", key)
 	}
-	extraction := value[info.Offset : info.Offset+info.Length]
+	extraction := make([]byte, info.Length)
+	copy(extraction, value[info.Offset:info.Offset+info.Length]) // else it would pollute dict
 	return extraction, nil
 }
