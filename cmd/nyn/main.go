@@ -67,21 +67,6 @@ func main() {
 		log.Fatalf("Error decoding TOML file: %v", err)
 	}
 
-	// check weekend holiday etc...
-	/*
-	  today := time.Now()
-	  tomorrow := today.AddDate(0, 0, 1)
-	  // should be some error handling here
-	  _, isTodayHoliday, _ := isHoliday(today, conf.HolidayJson)
-	  _, isTomorrowHoliday, _ := isHoliday(tomorrow, conf.HolidayJson)
-	  if !isTomorrowHoliday && !isWeekend(tomorrow) {
-	    log.Println("Schedule close at 12 PM")
-	  } // what if weekend is work day? maybe network stays? never mind
-	  if !isWeekend(today) && !isTodayHoliday {
-	    log.Println("Schedule start at 08 AM")
-	  }
-	*/
-
 	cryptoInfo := nynCrypto.H3CInfoDefault
 	cryptoInfo.WinVer = []byte(config.Crypto.WinVer)
 	// cryptoInfo.Version = []byte(config.Crypto.ClientVer)
