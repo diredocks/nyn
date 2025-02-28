@@ -87,7 +87,7 @@ jobs:
           cd "$LIBPCAP_DIR"
           TRIPLET=${MUSL_TOOLCHAIN%-cross}
           CC="$MUSL_DIR/bin/${TRIPLET}-gcc"
-          ./configure --host=$TRIPLET --with-pcap=linux --prefix="$LIBPCAP_DIR/install"
+          ./configure --host=$TRIPLET --with-pcap=linux --prefix="$LIBPCAP_DIR/install" CC="$CC"
           make -j$(nproc)
           make install
 
