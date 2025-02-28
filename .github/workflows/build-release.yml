@@ -31,19 +31,6 @@ jobs:
             goarch: riscv64
     name: Build ${{ matrix.arch }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl tar xz-utils make gcc
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-
       - name: Set environment variables
         run: |
           WORKSPACE_DIR="${{ github.workspace }}/cross-compile-workspace"
@@ -56,6 +43,21 @@ jobs:
           echo "LIBPCAP_VERSION=$LIBPCAP_VERSION" >> $GITHUB_ENV
           echo "LIBPCAP_DIR=$WORKSPACE_DIR/libpcap-$LIBPCAP_VERSION" >> $GITHUB_ENV
           echo "PROJECT_DIR=$WORKSPACE_DIR/nyn" >> $GITHUB_ENV
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          path: ${{ env.PROJECT_DIR }}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl tar xz-utils make gcc
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
 
       - name: Create workspace
         run: mkdir -p $WORKSPACE_DIR
@@ -80,11 +82,6 @@ jobs:
           ./configure --host=$TRIPLET --with-pcap=linux
           make -j$(nproc)
 
-      - name: Prepare project
-        run: |
-          mkdir -p $PROJECT_DIR
-          cp -r ${{ github.workspace }}/* $PROJECT_DIR/
-
       - name: Build binary
         run: |
           cd $PROJECT_DIR
@@ -101,6 +98,7 @@ jobs:
         with:
           name: nyn-${{ matrix.arch }}
           path: ${{ env.PROJECT_DIR }}/nyn-${{ matrix.arch }}
+
   release:
     needs: build
     runs-on: ubuntu-latest
