@@ -44,23 +44,33 @@ type DeviceInterface interface {
 }
 
 type AuthService struct {
-	Device    DeviceInterface
+	// device interface
+	Device DeviceInterface
+	// auth information
 	h3cInfo   nynCrypto.H3CInfo
 	h3cBuffer []byte
 	username  string
 	password  string
-	retry     int
-	isOnline  bool
+	// client logic
+	retry    int
+	isOnline bool
+	// state
+	state State
 }
 
 func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, password string, retry int) *AuthService {
 	return &AuthService{
-		Device:   device,
+		// device handle
+		Device: device,
+		// auth information
 		h3cInfo:  h3cInfo,
 		username: username,
 		password: password,
+		// client logic
 		retry:    retry,
 		isOnline: false,
+		// state
+		//state: Disconnected{},
 	}
 }
 
@@ -72,15 +82,8 @@ func (as *AuthService) Stop() error {
 
 func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 	l := newLogger()
-	ethLayer := packet.Layer(layers.LayerTypeEthernet)
-	ethPacket, _ := ethLayer.(*layers.Ethernet)
-
-	eapLayer := packet.Layer(layers.LayerTypeEAP)
-	if eapLayer == nil {
-		return nil
-	}
-
-	eapPacket, _ := eapLayer.(*layers.EAP)
+	ethPacket, _ := packet.Layer(layers.LayerTypeEthernet).(*layers.Ethernet)
+	eapPacket, _ := packet.Layer(layers.LayerTypeEAP).(*layers.EAP)
 	l.server.Info("eap", "Id", eapPacket.Id, "Type", eapPacket.Type, "Code", eapPacket.Code)
 
 	if as.Device.GetTargetMAC() == nil {
@@ -114,7 +117,7 @@ func (as *AuthService) HandlePacket(packet gopacket.Packet) error {
 		default:
 			if as.retry > 0 {
 				as.retry = as.retry - 1
-				l.client.Error("an error occured qwq! remaining", "retry", as.retry)
+				l.client.Error("an unknow error occured qwq! remaining", "retry", as.retry)
 				as.isOnline = false
 				as.SendStartPacket()
 			} else {

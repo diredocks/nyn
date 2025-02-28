@@ -28,7 +28,7 @@
 
             # goimports, godoc, etc.
             gotools
-            graphviz
+            #graphviz
 
             # https://github.com/golangci/golangci-lint
             golangci-lint
@@ -36,7 +36,9 @@
 
             libpcap
           ];
-
+          shellHook = ''
+            export SHELL=zsh
+          '';
         };
       });
     };
