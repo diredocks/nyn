@@ -37,7 +37,7 @@
             libpcap
           ];
           shellHook = ''
-            export SHELL=zsh
+            export SHELL=$(which zsh)
           '';
         };
       });
