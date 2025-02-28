@@ -59,6 +59,14 @@ jobs:
         with:
           go-version: '1.22'
 
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
       - name: Create workspace
         run: mkdir -p $WORKSPACE_DIR
 
@@ -90,7 +98,7 @@ jobs:
           CC="$MUSL_DIR/bin/${TRIPLET}-gcc"
           CGO_ENABLED=1 GOOS=linux GOARCH=$GOARCH \
             CC="$CC" \
-            CGO_LDFLAGS="-L$LIBPCAP_DIR/install/lib" \
+            CGO_LDFLAGS="-L$LIBPCAP_DIR/install/lib -lpcap" \
             CGO_CFLAGS="-I$LIBPCAP_DIR/install/include" \
             go build -ldflags "-s -w" -o nyn-$ARCH ./cmd/nyn/
 
