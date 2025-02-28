@@ -1,4 +1,7 @@
 .vscode
+nyn
+nyn.exe
+config.toml
 cmd/nyn/nyn
 cmd/nyn/nyn.exe
 cmd/nyn/config.toml
