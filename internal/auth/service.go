@@ -55,7 +55,7 @@ type AuthService struct {
 	retry    int
 	isOnline bool
 	// state
-	state State
+	//state State
 }
 
 func New(device DeviceInterface, h3cInfo nynCrypto.H3CInfo, username string, password string, retry int) *AuthService {
