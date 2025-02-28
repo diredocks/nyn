@@ -1,0 +1,120 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+            musl_toolchain: arm-linux-musleabihf-cross
+            goarch: arm
+          - arch: aarch64
+            musl_toolchain: aarch64-linux-musl-cross
+            goarch: arm64
+          - arch: x86_64
+            musl_toolchain: x86_64-linux-musl-cross
+            goarch: amd64
+          - arch: i686
+            musl_toolchain: i686-linux-musl-cross
+            goarch: 386
+          - arch: mips64
+            musl_toolchain: mips64-linux-musl-cross
+            goarch: mips64
+          - arch: riscv64
+            musl_toolchain: riscv64-linux-musl-cross
+            goarch: riscv64
+    name: Build ${{ matrix.arch }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl tar xz-utils make gcc
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Set environment variables
+        run: |
+          WORKSPACE_DIR="${{ github.workspace }}/cross-compile-workspace"
+          LIBPCAP_VERSION="1.10.5"
+          echo "MUSL_TOOLCHAIN=${{ matrix.musl_toolchain }}" >> $GITHUB_ENV
+          echo "GOARCH=${{ matrix.goarch }}" >> $GITHUB_ENV
+          echo "ARCH=${{ matrix.arch }}" >> $GITHUB_ENV
+          echo "WORKSPACE_DIR=$WORKSPACE_DIR" >> $GITHUB_ENV
+          echo "MUSL_DIR=$WORKSPACE_DIR/${{ matrix.musl_toolchain }}" >> $GITHUB_ENV
+          echo "LIBPCAP_VERSION=$LIBPCAP_VERSION" >> $GITHUB_ENV
+          echo "LIBPCAP_DIR=$WORKSPACE_DIR/libpcap-$LIBPCAP_VERSION" >> $GITHUB_ENV
+          echo "PROJECT_DIR=$WORKSPACE_DIR/nyn" >> $GITHUB_ENV
+
+      - name: Create workspace
+        run: mkdir -p $WORKSPACE_DIR
+
+      - name: Download musl toolchain
+        run: |
+          cd $WORKSPACE_DIR
+          curl -LO "https://musl.cc/$MUSL_TOOLCHAIN.tgz"
+          tar -xzf "$MUSL_TOOLCHAIN.tgz"
+
+      - name: Download libpcap
+        run: |
+          cd $WORKSPACE_DIR
+          curl -LO "https://www.tcpdump.org/release/libpcap-$LIBPCAP_VERSION.tar.xz"
+          tar -xf "libpcap-$LIBPCAP_VERSION.tar.xz"
+
+      - name: Build libpcap
+        run: |
+          cd "$LIBPCAP_DIR"
+          TRIPLET=${MUSL_TOOLCHAIN%-cross}
+          CC="$MUSL_DIR/bin/${TRIPLET}-gcc"
+          ./configure --host=$TRIPLET --with-pcap=linux
+          make -j$(nproc)
+
+      - name: Prepare project
+        run: |
+          mkdir -p $PROJECT_DIR
+          cp -r ${{ github.workspace }}/* $PROJECT_DIR/
+
+      - name: Build binary
+        run: |
+          cd $PROJECT_DIR
+          TRIPLET=${MUSL_TOOLCHAIN%-cross}
+          CC="$MUSL_DIR/bin/${TRIPLET}-gcc -I$LIBPCAP_DIR/include -L$LIBPCAP_DIR"
+          CGO_ENABLED=1 GOOS=linux GOARCH=$GOARCH \
+            CC="$CC" \
+            CGO_LDFLAGS="-L$LIBPCAP_DIR" \
+            CGO_CFLAGS="-I$LIBPCAP_DIR/include" \
+            go build -ldflags "-s -w" -o nyn-$ARCH ./cmd/nyn/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nyn-${{ matrix.arch }}
+          path: ${{ env.PROJECT_DIR }}/nyn-${{ matrix.arch }}
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          files: |
+            artifacts/*/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
