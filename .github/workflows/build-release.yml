@@ -79,18 +79,19 @@ jobs:
           cd "$LIBPCAP_DIR"
           TRIPLET=${MUSL_TOOLCHAIN%-cross}
           CC="$MUSL_DIR/bin/${TRIPLET}-gcc"
-          ./configure --host=$TRIPLET --with-pcap=linux
+          ./configure --host=$TRIPLET --with-pcap=linux --prefix="$LIBPCAP_DIR/install"
           make -j$(nproc)
+          make install
 
       - name: Build binary
         run: |
           cd $PROJECT_DIR
           TRIPLET=${MUSL_TOOLCHAIN%-cross}
-          CC="$MUSL_DIR/bin/${TRIPLET}-gcc -I$LIBPCAP_DIR/include -L$LIBPCAP_DIR"
+          CC="$MUSL_DIR/bin/${TRIPLET}-gcc"
           CGO_ENABLED=1 GOOS=linux GOARCH=$GOARCH \
             CC="$CC" \
-            CGO_LDFLAGS="-L$LIBPCAP_DIR" \
-            CGO_CFLAGS="-I$LIBPCAP_DIR/include" \
+            CGO_LDFLAGS="-L$LIBPCAP_DIR/install/lib" \
+            CGO_CFLAGS="-I$LIBPCAP_DIR/install/include" \
             go build -ldflags "-s -w" -o nyn-$ARCH ./cmd/nyn/
 
       - name: Upload artifact
