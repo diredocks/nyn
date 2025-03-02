@@ -30,6 +30,9 @@ jobs:
           - arch: riscv64
             musl_toolchain: riscv64-linux-musl-cross
             goarch: riscv64
+          - arch: mipsel
+            musl_toolchain: mipsel-linux-muslsf-cross
+            goarch: mipsle
           # Windows build (cross-compiled on Ubuntu)
           - arch: windows-amd64
             goarch: amd64
@@ -88,10 +91,17 @@ jobs:
           cd ${{ github.workspace }}/source
           TRIPLET=${MUSL_TOOLCHAIN%-cross}
           CC="$WORKSPACE/$MUSL_TOOLCHAIN/bin/${TRIPLET}-gcc"
-          CGO_ENABLED=1 GOOS=linux GOARCH=${{ matrix.goarch }} \
+          
+          if [[ "${{ matrix.arch }}" == "mipsel" ]]; then
+            GOMIPS=softfloat
+            EXTRA_CFLAGS="-msoft-float"
+            EXTRA_LDFLAGS="-msoft-float"
+          fi
+
+          CGO_ENABLED=1 GOOS=linux GOARCH=${{ matrix.goarch }} GOARM=${GOARM:-} \
             CC="$CC" \
-            CGO_LDFLAGS="-L$WORKSPACE/libpcap-install/lib -lpcap" \
-            CGO_CFLAGS="-I$WORKSPACE/libpcap-install/include" \
+            CGO_CFLAGS="-I$WORKSPACE/libpcap-install/include $EXTRA_CFLAGS" \
+            CGO_LDFLAGS="-L$WORKSPACE/libpcap-install/lib -lpcap $EXTRA_LDFLAGS" \
             go build -ldflags "-s -w" -o "$WORKSPACE/$BINARY_NAME" ./cmd/nyn/
 
       - name: Upload Linux artifact
