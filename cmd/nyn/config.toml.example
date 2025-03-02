@@ -1,23 +1,13 @@
 [general]
-schedule_callback = true
-wake_time = "7:00"
-sleep_time = "11:59"
-wake_callback = "wifi up"
-sleep_callback = "wifi down"
+timeout = 1
+retry = 5
 
-[encryption]
-aes_key = []
-aes_iv = []
-win_ver = ""
-client_version = ""
-client_key = ""
+[crypto]
+win_ver = "r70393861"
+client_key = "Oly5D62FaE94W7"
+#client_version = "CH\x11V7.30-0601"
 
 [[auth]]
-user = "leo"
-password = "111"
-device = "enp1s0"
-
-[[auth]]
-user = "leo"
-password = "111"
-device = "wlp2s0"
+user = ""
+password = ""
+device = ""
