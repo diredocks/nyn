@@ -31,7 +31,7 @@ jobs:
             musl_toolchain: riscv64-linux-musl-cross
             goarch: riscv64
           - arch: mipsel
-            musl_toolchain: mipsel-linux-muslsf-cross
+            musl_toolchain: mipsel-linux-musln32sf-cross
             goarch: mipsle
           # Windows build (cross-compiled on Ubuntu)
           - arch: windows-amd64
