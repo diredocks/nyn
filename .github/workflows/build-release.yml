@@ -31,7 +31,7 @@ jobs:
             musl_toolchain: riscv64-linux-musl-cross
             goarch: riscv64
           - arch: mipsel
-            musl_toolchain: mipsel-linux-musln32sf-cross
+            musl_toolchain: mipsel-linux-muslsf-cross
             goarch: mipsle
           # Windows build (cross-compiled on Ubuntu)
           - arch: windows-amd64
@@ -93,13 +93,12 @@ jobs:
           CC="$WORKSPACE/$MUSL_TOOLCHAIN/bin/${TRIPLET}-gcc"
           
           if [[ "${{ matrix.arch }}" == "mipsel" ]]; then
-            GOMIPS=softfloat
             EXTRA_CFLAGS="-msoft-float"
             EXTRA_LDFLAGS="-msoft-float"
           fi
 
           CGO_ENABLED=1 GOOS=linux GOARCH=${{ matrix.goarch }} GOARM=${GOARM:-} \
-            CC="$CC" \
+            CC="$CC" GOMIPS=softfloat \
             CGO_CFLAGS="-I$WORKSPACE/libpcap-install/include $EXTRA_CFLAGS" \
             CGO_LDFLAGS="-L$WORKSPACE/libpcap-install/lib -lpcap $EXTRA_LDFLAGS" \
             go build -ldflags "-s -w" -o "$WORKSPACE/$BINARY_NAME" ./cmd/nyn/
