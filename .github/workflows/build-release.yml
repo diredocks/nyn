@@ -7,41 +7,34 @@ on:
 
 jobs:
   build:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          # Linux
+          # Linux builds
           - arch: armv7
-            os: ubuntu-latest
             musl_toolchain: arm-linux-musleabihf-cross
             goarch: arm
           - arch: aarch64
-            os: ubuntu-latest
             musl_toolchain: aarch64-linux-musl-cross
             goarch: arm64
           - arch: x86_64
-            os: ubuntu-latest
             musl_toolchain: x86_64-linux-musl-cross
             goarch: amd64
           - arch: i686
-            os: ubuntu-latest
             musl_toolchain: i686-linux-musl-cross
             goarch: 386
           - arch: mips64
-            os: ubuntu-latest
             musl_toolchain: mips64-linux-musl-cross
             goarch: mips64
           - arch: riscv64
-            os: ubuntu-latest
             musl_toolchain: riscv64-linux-musl-cross
             goarch: riscv64
-          # Windows
+          # Windows build (cross-compiled on Ubuntu)
           - arch: windows-amd64
-            os: windows-latest
             goarch: amd64
 
-    runs-on: ${{ matrix.os }}
-    name: Build ${{ matrix.arch }} on ${{ matrix.os }}
+    name: Build ${{ matrix.arch }} on ubuntu-latest
     env:
       LIBPCAP_VERSION: "1.10.5"
       PROJECT_NAME: "nyn"
@@ -52,9 +45,9 @@ jobs:
         with:
           path: ${{ github.workspace }}/source
 
-      # ========== Linux  ==========
+      # ========= Linux-specific steps =========
       - name: Setup Linux variables
-        if: runner.os == 'Linux'
+        if: matrix.musl_toolchain
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
@@ -63,13 +56,13 @@ jobs:
           echo "BINARY_NAME=$PROJECT_NAME-$VERSION-linux-${{ matrix.arch }}" >> $GITHUB_ENV
 
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
+        if: matrix.musl_toolchain
         run: |
           sudo apt-get update
           sudo apt-get install -y curl tar xz-utils make gcc
 
       - name: Setup musl toolchain
-        if: runner.os == 'Linux'
+        if: matrix.musl_toolchain
         run: |
           mkdir -p $WORKSPACE
           cd $WORKSPACE
@@ -77,7 +70,7 @@ jobs:
           tar -xzf "$MUSL_TOOLCHAIN.tgz"
 
       - name: Build libpcap (Linux)
-        if: runner.os == 'Linux'
+        if: matrix.musl_toolchain
         run: |
           cd $WORKSPACE
           curl -LO "https://www.tcpdump.org/release/libpcap-$LIBPCAP_VERSION.tar.xz"
@@ -90,7 +83,7 @@ jobs:
           make install
 
       - name: Build Linux binary
-        if: runner.os == 'Linux'
+        if: matrix.musl_toolchain
         run: |
           cd ${{ github.workspace }}/source
           TRIPLET=${MUSL_TOOLCHAIN%-cross}
@@ -102,31 +95,29 @@ jobs:
             go build -ldflags "-s -w" -o "$WORKSPACE/$BINARY_NAME" ./cmd/nyn/
 
       - name: Upload Linux artifact
-        if: runner.os == 'Linux'
+        if: matrix.musl_toolchain
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}
           path: ${{ env.WORKSPACE }}/${{ env.BINARY_NAME }}
 
-      # ========== Windows ==========
+      # ========= Windows build steps (cross compile on Ubuntu) =========
       - name: Setup Windows variables
-        if: runner.os == 'Windows'
-        shell: powershell
+        if: matrix.musl_toolchain == null
         run: |
-          $VERSION = $env:GITHUB_REF -replace '^refs/tags/v', ''
-          $BINARY_NAME = "$env:PROJECT_NAME-$VERSION-windows-amd64.exe"
-          Write-Output "VERSION=$VERSION" | Out-File -FilePath $env:GITHUB_ENV -Append
-          Write-Output "BINARY_NAME=$BINARY_NAME" | Out-File -FilePath $env:GITHUB_ENV -Append
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          BINARY_NAME="$PROJECT_NAME-$VERSION-windows-${{ matrix.goarch }}.exe"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BINARY_NAME=$BINARY_NAME" >> $GITHUB_ENV
 
       - name: Build Windows binary
-        if: runner.os == 'Windows'
-        shell: powershell
+        if: matrix.musl_toolchain == null
         run: |
-          Set-Location "${{ github.workspace }}/source"
-          go build -ldflags "-s -w" -o "$env:BINARY_NAME" ./cmd/nyn/
+          cd ${{ github.workspace }}/source
+          GOOS=windows GOARCH=${{ matrix.goarch }} go build -ldflags "-s -w" -o "$BINARY_NAME" ./cmd/nyn/
 
       - name: Upload Windows artifact
-        if: runner.os == 'Windows'
+        if: matrix.musl_toolchain == null
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}
