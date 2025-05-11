@@ -7,7 +7,7 @@
     self,
     nixpkgs,
   }: let
-    goVersion = 22; # Change this to update the whole Go stack
+    goVersion = 24; # Change this to update the whole Go stack
 
     supportedSystems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
     forEachSupportedSystem = f:
